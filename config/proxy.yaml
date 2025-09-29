@@ -9,9 +9,17 @@ proxy:
   # Request timeout in milliseconds
   requestTimeoutMs: 10000
   # Base URL for the upstream Gemini API
-  upstreamBaseUrl: "https://generativelanguage.googleapis.com"
+  upstreamBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/"
   # Proxy mode: "live" or "mock"
-  mode: "mock"
+  mode: "live"
+  # Authentication configuration for /v1 API endpoints
+  # Set to empty array [] to disable authentication (public access)
+  # Add tokens to require authentication
+  accessTokens:
+    - "sk-proxy-test-token-1"
+    - "sk-proxy-test-token-2"
+  # Enable/disable authentication (default: true if accessTokens is not empty)
+  requireAuth: true
 
 # Health check and circuit breaker configuration
 monitoring:

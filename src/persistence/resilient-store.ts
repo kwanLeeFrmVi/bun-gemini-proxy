@@ -55,4 +55,22 @@ export class ResilientStateStore implements StateStore {
       this.primary = this.fallback;
     }
   }
+
+  getDailyUsageStats(): ReturnType<StateStore["getDailyUsageStats"]> {
+    try {
+      return this.primary.getDailyUsageStats();
+    } catch (error) {
+      logger.error({ error }, "Primary persistence daily stats failed; using fallback");
+      return this.fallback.getDailyUsageStats();
+    }
+  }
+
+  getWeeklyUsageStats(): ReturnType<StateStore["getWeeklyUsageStats"]> {
+    try {
+      return this.primary.getWeeklyUsageStats();
+    } catch (error) {
+      logger.error({ error }, "Primary persistence weekly stats failed; using fallback");
+      return this.fallback.getWeeklyUsageStats();
+    }
+  }
 }

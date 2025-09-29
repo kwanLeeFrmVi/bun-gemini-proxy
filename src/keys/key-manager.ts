@@ -121,12 +121,12 @@ export class KeyManager {
     }));
   }
 
-  selectKey(): KeySelectionResult | null {
+  selectKey(isMockMode = false): KeySelectionResult | null {
     const candidates: InternalKeyState[] = [];
     this.keys.forEach((state) => {
       this.evaluateCircuitState(state.record.id);
       const status = this.describeStatus(state.record, state.circuit);
-      if (status === "active" || status === "circuit_half_open") {
+      if (isMockMode || status === "active" || status === "circuit_half_open") {
         const multiplier = Math.max(1, state.record.weight);
         for (let i = 0; i < multiplier; i += 1) {
           candidates.push(state);

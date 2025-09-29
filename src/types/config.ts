@@ -6,6 +6,8 @@ export interface ProxyConfig {
   requestTimeoutMs: number;
   upstreamBaseUrl: string;
   mode: "live" | "mock";
+  accessTokens: string[];
+  requireAuth: boolean;
 }
 
 export interface ApiKeyConfig {

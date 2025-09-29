@@ -109,7 +109,7 @@ settings:
 
 - Path: `/v1/*` → `https://generativelanguage.googleapis.com/v1beta/openai/*`
 - Headers: Preserve all except Authorization
-- Auth: Inject `x-goog-api-key: {selected_key}`
+- Auth: Inject `Authorization: Bearer {selected_key}`
 - Errors: Map Gemini errors to OpenAI format
 
 ### Health Score Calculation

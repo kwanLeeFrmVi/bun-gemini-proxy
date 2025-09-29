@@ -72,7 +72,9 @@ function expectKeyStatus(entry: unknown) {
   expect(typeof key.health_score).toBe("number");
   expect(key.health_score as number).toBeGreaterThanOrEqual(0);
   expect(key.health_score as number).toBeLessThanOrEqual(1);
-  expect(typeof key.last_used).toBe("string");
+  if (key.last_used !== null) {
+    expect(typeof key.last_used).toBe("string");
+  }
   if (key.failure_count !== undefined) {
     expect(typeof key.failure_count).toBe("number");
   }

@@ -20,6 +20,8 @@ const DEFAULT_PROXY_CONFIG: ProxyConfig = {
   requestTimeoutMs: 10_000,
   upstreamBaseUrl: process.env.GEMINI_UPSTREAM_BASE_URL ?? "https://generativelanguage.googleapis.com",
   mode: process.env.GEMINI_PROXY_MODE === "live" ? "live" : "mock",
+  accessTokens: [],
+  requireAuth: false,
 };
 
 const DEFAULT_MONITORING_CONFIG: MonitoringConfig = {
@@ -108,10 +110,7 @@ export class ConfigManager {
     const proxyConfig: ProxyConfig = {
       ...DEFAULT_PROXY_CONFIG,
       ...(proxyDoc.proxy ?? {}),
-      adminToken:
-        proxyDoc.proxy?.adminToken === undefined
-          ? DEFAULT_PROXY_CONFIG.adminToken
-          : proxyDoc.proxy.adminToken || null,
+      adminToken: process.env.PROXY_ADMIN_TOKEN ?? proxyDoc.proxy?.adminToken ?? null,
       mode: proxyDoc.proxy?.mode === "live" ? "live" : DEFAULT_PROXY_CONFIG.mode,
     } satisfies ProxyConfig;
 

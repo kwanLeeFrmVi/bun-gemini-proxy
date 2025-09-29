@@ -10,6 +10,8 @@ declare global {
 }
 
 if (!globalThis.__geminiProxyServerLoader) {
+  process.env.PROXY_ADMIN_TOKEN = "test-admin-token";
+  process.env.GEMINI_PROXY_MODE = "mock";
   globalThis.__geminiProxyServerLoader = (async () => {
     const context = startProxyServer({ listen: false });
     globalThis.__geminiProxyServerContext = context;

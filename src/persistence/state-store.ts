@@ -17,12 +17,23 @@ export interface PersistedState {
   metrics: RequestMetricsSnapshot[];
 }
 
+export interface UsageStats {
+  keyId: string;
+  totalRequests: number;
+  successCount: number;
+  errorCount: number;
+  successRate: number;
+  avgLatencyMs: number;
+}
+
 export interface StateStore {
   init(): void;
   load(): PersistedState;
   save(state: PersistedState): void;
   upsertKey(record: ApiKeyRecord, health: HealthScoreState, circuit: CircuitBreakerState): void;
   recordRequestMetrics(snapshot: RequestMetricsSnapshot): void;
+  getDailyUsageStats(): UsageStats[];
+  getWeeklyUsageStats(): UsageStats[];
 }
 
 function ensureDir(path: string): void {
@@ -93,7 +104,7 @@ export class SQLiteStateStore implements StateStore {
         `SELECT id, api_key, name, weight, is_active, created_at, last_used_at, cooldown_seconds FROM api_keys`,
       )
       .all()
-      .map((row: any) => ({
+      .map((row: Record<string, unknown>) => ({
         id: row.id as string,
         key: row.api_key as string,
         name: row.name as string,
@@ -109,7 +120,7 @@ export class SQLiteStateStore implements StateStore {
         `SELECT key_id, score, success_count, failure_count, window_start_time, last_updated FROM health_scores`,
       )
       .all()
-      .map((row: any) => ({
+      .map((row: Record<string, unknown>) => ({
         keyId: row.key_id as string,
         score: Number(row.score ?? 1),
         successCount: Number(row.success_count ?? 0),
@@ -123,7 +134,7 @@ export class SQLiteStateStore implements StateStore {
         `SELECT key_id, state, failure_count, last_failure_time, next_attempt_time, opened_at FROM circuit_breaker_states`,
       )
       .all()
-      .map((row: any) => ({
+      .map((row: Record<string, unknown>) => ({
         keyId: row.key_id as string,
         state: row.state as CircuitState,
         failureCount: Number(row.failure_count ?? 0),
@@ -137,7 +148,7 @@ export class SQLiteStateStore implements StateStore {
         `SELECT key_id, timestamp, request_count, success_count, error_count, avg_latency, p95_latency FROM request_metrics ORDER BY timestamp DESC LIMIT 1000`,
       )
       .all()
-      .map((row: any) => ({
+      .map((row: Record<string, unknown>) => ({
         keyId: row.key_id as string,
         timestamp: new Date(row.timestamp as string),
         requestCount: Number(row.request_count ?? 0),
@@ -265,6 +276,54 @@ export class SQLiteStateStore implements StateStore {
       snapshot.p95LatencyMs,
     );
   }
+
+  getDailyUsageStats(): UsageStats[] {
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return this.getUsageStatsAfter(dayAgo);
+  }
+
+  getWeeklyUsageStats(): UsageStats[] {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return this.getUsageStatsAfter(weekAgo);
+  }
+
+  private getUsageStatsAfter(since: Date): UsageStats[] {
+    const results = this.db
+      .query(
+        `SELECT
+          key_id,
+          SUM(request_count) as total_requests,
+          SUM(success_count) as success_count,
+          SUM(error_count) as error_count,
+          AVG(avg_latency) as avg_latency
+        FROM request_metrics
+        WHERE timestamp >= ?1
+        GROUP BY key_id`,
+      )
+      .all(since.toISOString()) as Array<{
+        key_id: string;
+        total_requests: number;
+        success_count: number;
+        error_count: number;
+        avg_latency: number;
+      }>;
+
+    return results.map((row) => {
+      const totalRequests = Number(row.total_requests ?? 0);
+      const successCount = Number(row.success_count ?? 0);
+      const errorCount = Number(row.error_count ?? 0);
+      const successRate = totalRequests > 0 ? successCount / totalRequests : 0;
+
+      return {
+        keyId: row.key_id,
+        totalRequests,
+        successCount,
+        errorCount,
+        successRate,
+        avgLatencyMs: Number(row.avg_latency ?? 0),
+      } satisfies UsageStats;
+    });
+  }
 }
 
 export class JsonStateStore implements StateStore {
@@ -383,5 +442,47 @@ export class JsonStateStore implements StateStore {
       current.metrics.splice(0, current.metrics.length - 1000);
     }
     this.save(current);
+  }
+
+  getDailyUsageStats(): UsageStats[] {
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return this.getUsageStatsAfter(dayAgo);
+  }
+
+  getWeeklyUsageStats(): UsageStats[] {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    return this.getUsageStatsAfter(weekAgo);
+  }
+
+  private getUsageStatsAfter(since: Date): UsageStats[] {
+    const current = this.load();
+    const filtered = current.metrics.filter((m) => m.timestamp >= since);
+
+    const grouped = new Map<string, { requests: number; success: number; errors: number; latencies: number[] }>();
+
+    filtered.forEach((metric) => {
+      const existing = grouped.get(metric.keyId) ?? { requests: 0, success: 0, errors: 0, latencies: [] };
+      existing.requests += metric.requestCount;
+      existing.success += metric.successCount;
+      existing.errors += metric.errorCount;
+      existing.latencies.push(metric.avgLatencyMs);
+      grouped.set(metric.keyId, existing);
+    });
+
+    return Array.from(grouped.entries()).map(([keyId, stats]) => {
+      const successRate = stats.requests > 0 ? stats.success / stats.requests : 0;
+      const avgLatency = stats.latencies.length > 0
+        ? stats.latencies.reduce((a, b) => a + b, 0) / stats.latencies.length
+        : 0;
+
+      return {
+        keyId,
+        totalRequests: stats.requests,
+        successCount: stats.success,
+        errorCount: stats.errors,
+        successRate,
+        avgLatencyMs: avgLatency,
+      } satisfies UsageStats;
+    });
   }
 }

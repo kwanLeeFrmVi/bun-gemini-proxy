@@ -45,7 +45,7 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
   keyManager.bootstrap(resolvedConfig.keys, persisted);
 
   const geminiClient = new GeminiClient(proxyConfig);
-  const proxyRouter = new ProxyRouter({ config: proxyConfig, keyManager, gemini: geminiClient });
+  const proxyRouter = new ProxyRouter({ config: proxyConfig, keyManager, gemini: geminiClient, stateStore });
   const adminRouter = new AdminRouter({
     adminToken: proxyConfig.adminToken,
     keyManager,
@@ -87,6 +87,10 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
     try {
       if (url.pathname.startsWith("/admin")) {
         return await adminRouter.handle(request);
+      }
+
+      if (url.pathname === "/help" || url.pathname === "/info") {
+        return await proxyRouter.handle(request);
       }
 
       if (url.pathname.startsWith("/v1")) {
