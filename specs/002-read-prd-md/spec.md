@@ -49,6 +49,8 @@
 - Q: Which endpoint coverage should the proxy prioritize? → A: Full OpenAI v1 API surface
 - Q: How should the system behave during persistence failures? → A: Switch to backup persistence mechanism (file-based fallback)
 - Q: What should be the fallback behavior when response translation fails? → A: Return raw Gemini response with error headers
+- Q: When Gemini returns 429 (rate limit) responses, what should be the immediate retry behavior? → A: Immediate rotation to next healthy key
+- Q: What should be the maximum total request timeout including upstream calls? → A: timeout 10s
 
 ---
 
@@ -60,7 +62,7 @@ A backend engineer uses an existing OpenAI SDK pointed at `http://localhost:4806
 
 ### Acceptance Scenarios
 
-1. **Given** the proxy is running with at least one healthy API key, **When** a client sends a standard OpenAI-compatible completion request, **Then** the proxy forwards it to Gemini and returns the Gemini response mapped to the OpenAI schema within the target latency budget (<100 ms overhead).
+1. **Given** the proxy is running with at least one healthy API key, **When** a client sends a standard OpenAI-compatible completion request, **Then** the proxy forwards it to Gemini and returns the Gemini response mapped to the OpenAI schema within the target latency budget (<100 ms overhead) and total timeout of 10 seconds.
 2. **Given** one API key begins returning 429 errors, **When** the proxy receives multiple failures across the configured window, **Then** the key is rotated out, another healthy key is used automatically, and operators are notified via logs and metrics.
 3. **Given** the proxy server is restarted, **When** it comes back online, **Then** it retains all key health scores and usage history from before the restart
 4. **Given** an ops team member accesses the health endpoint, **When** they check system status, **Then** they can see which keys are active, disabled, or recovering with clear diagnostic information
@@ -86,7 +88,7 @@ A backend engineer uses an existing OpenAI SDK pointed at `http://localhost:4806
 - **FR-006**: Operators MUST have endpoints or mechanisms to view health metrics, logs, and key status, including the ability to manually enable, disable, or reprioritize keys.
 - **FR-007**: The configuration MUST be managed via a YAML file that supports hot reloads and optional JSON export/import for portability.
 - **FR-008**: The proxy MUST provide structured observability, including Prometheus-style metrics, masked logging, and health summaries for operational monitoring.
-- **FR-009**: The proxy MUST enforce request validation, rate-limit handling, and graceful shutdown behaviors to maintain reliability under failures.
+- **FR-009**: The proxy MUST enforce request validation, immediate key rotation on 429 responses, 10-second total request timeouts, and graceful shutdown behaviors to maintain reliability under failures.
 - **FR-010**: The proxy MUST support streaming and non-streaming interactions for the complete OpenAI v1 API surface (completions, chat, embeddings, models, files, fine-tuning, etc.), excluding legacy-only variants.
 - **FR-011**: Admin and debug endpoints MUST require a static bearer token drawn from YAML configuration, with the option to disable auth only when explicitly set.
 - **FR-012**: System MUST mask API keys in all logs and debug output

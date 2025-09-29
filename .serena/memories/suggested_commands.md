@@ -1,6 +1,7 @@
 # Suggested Commands for Development
 
 ## Bun Path Setup (Required First)
+
 ```bash
 # Add bun to PATH if not already available
 export PATH=$HOME/.bun/bin:$PATH
@@ -12,6 +13,7 @@ export PATH=$HOME/.bun/bin:$PATH
 ## Core Development Commands
 
 ### Running the Application
+
 ```bash
 # Start the server
 bun run index.ts
@@ -24,6 +26,7 @@ bun --watch index.ts
 ```
 
 ### Package Management
+
 ```bash
 # Install dependencies
 bun install
@@ -39,6 +42,7 @@ bun update
 ```
 
 ### Testing
+
 ```bash
 # Run all tests
 bun test
@@ -51,6 +55,7 @@ bun test path/to/file.test.ts
 ```
 
 ### Building & Bundling
+
 ```bash
 # Build/bundle TypeScript files
 bun build index.ts --outdir=dist
@@ -60,6 +65,7 @@ bun build index.ts --outdir=dist --minify
 ```
 
 ### TypeScript & Linting
+
 ```bash
 # Type check without emitting
 bun tsc --noEmit
@@ -69,12 +75,14 @@ bun run tsc
 ```
 
 ### Database (SQLite)
+
 ```bash
 # Access SQLite shell (once DB is created)
 bun run sqlite3 <database.db>
 ```
 
 ### Environment & Debugging
+
 ```bash
 # Run with environment variables (Bun auto-loads .env)
 bun run index.ts
@@ -87,6 +95,7 @@ bun --version
 ```
 
 ### Git Commands
+
 ```bash
 # Check status
 git status
@@ -102,6 +111,7 @@ git push origin main
 ```
 
 ### System Utilities (macOS/Darwin)
+
 ```bash
 # List files with details
 ls -la
@@ -120,6 +130,7 @@ kill -9 $(lsof -t -i:4806)
 ```
 
 ### Project-Specific (Future)
+
 ```bash
 # Start proxy server on port 4806
 PORT=4806 bun run index.ts
@@ -135,6 +146,7 @@ curl http://localhost:4806/metrics
 ```
 
 ## Important Notes
+
 - Bun automatically loads `.env` files - no need for dotenv
 - Use Bun's native APIs (Bun.serve, bun:sqlite) instead of Node.js packages
 - The project runs on macOS (Darwin), some commands may differ on Linux

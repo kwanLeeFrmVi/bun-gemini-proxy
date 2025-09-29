@@ -3,6 +3,7 @@
 ## When a Task is Completed
 
 ### 1. Code Quality Checks
+
 ```bash
 # Type checking - ensure no TypeScript errors
 bun run tsc --noEmit
@@ -12,6 +13,7 @@ bun run tsc --noEmit
 ```
 
 ### 2. Testing
+
 ```bash
 # Run all tests
 bun test
@@ -23,6 +25,7 @@ bun test
 ```
 
 ### 3. Manual Testing
+
 ```bash
 # Start the server
 bun --hot index.ts
@@ -37,6 +40,7 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 ```
 
 ### 4. Documentation Updates
+
 - Update README.md if functionality changed
 - Add JSDoc comments to new public APIs
 - Update API documentation if endpoints changed
@@ -44,6 +48,7 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 - Update configuration examples
 
 ### 5. Dependency Audit
+
 ```bash
 # Check for dependency updates
 bun update --dry-run
@@ -53,6 +58,7 @@ git diff bun.lock
 ```
 
 ### 6. Git Commit
+
 ```bash
 # Stage changes
 git add .
@@ -62,7 +68,7 @@ git status
 git diff --cached
 
 # Commit with descriptive message
-git commit -m "feat: implement feature X" 
+git commit -m "feat: implement feature X"
 # Use conventional commits:
 # - feat: new feature
 # - fix: bug fix
@@ -74,24 +80,28 @@ git commit -m "feat: implement feature X"
 ```
 
 ### 7. Performance Verification
+
 - Check that proxy overhead is < 100ms
 - Verify memory usage is stable
 - Ensure no memory leaks in long-running processes
 - Test with concurrent requests
 
 ### 8. Configuration & State
+
 - Verify SQLite migrations work correctly
 - Test configuration hot-reload
 - Ensure graceful shutdown preserves state
 - Check error recovery mechanisms
 
 ### 9. Security Review
+
 - No API keys in code or logs
 - Secrets properly masked in debug output
 - Input validation in place
 - Rate limiting functional
 
 ### 10. Final Checks Before Push
+
 ```bash
 # Ensure working directory is clean
 git status
@@ -107,6 +117,7 @@ git push origin <branch-name>
 ```
 
 ## Continuous Monitoring (Production)
+
 - Check health endpoint regularly
 - Monitor metrics endpoint
 - Review logs for errors
@@ -114,6 +125,7 @@ git push origin <branch-name>
 - Check circuit breaker behavior
 
 ## Notes
+
 - Always test with both healthy and failing API keys
 - Verify behavior under rate limits (429 responses)
 - Test graceful degradation when all keys fail
