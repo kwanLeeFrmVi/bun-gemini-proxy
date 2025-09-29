@@ -20,18 +20,18 @@ paths:
       description: Returns health status of all API keys and system metrics
       operationId: getHealthStatus
       responses:
-        '200':
+        "200":
           description: System health information
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthStatusResponse'
-        '401':
+                $ref: "#/components/schemas/HealthStatusResponse"
+        "401":
           description: Unauthorized - invalid or missing bearer token
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/keys:
     get:
@@ -39,18 +39,18 @@ paths:
       description: Returns status and health information for all configured API keys
       operationId: listKeysStatus
       responses:
-        '200':
+        "200":
           description: API keys status information
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KeysStatusResponse'
-        '401':
+                $ref: "#/components/schemas/KeysStatusResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/keys/{keyId}/enable:
     post:
@@ -65,24 +65,24 @@ paths:
             type: string
           description: API key identifier
       responses:
-        '200':
+        "200":
           description: Key enabled successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KeyOperationResponse'
-        '404':
+                $ref: "#/components/schemas/KeyOperationResponse"
+        "404":
           description: Key not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/keys/{keyId}/disable:
     post:
@@ -97,24 +97,24 @@ paths:
             type: string
           description: API key identifier
       responses:
-        '200':
+        "200":
           description: Key disabled successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/KeyOperationResponse'
-        '404':
+                $ref: "#/components/schemas/KeyOperationResponse"
+        "404":
           description: Key not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/metrics:
     get:
@@ -122,19 +122,19 @@ paths:
       description: Returns metrics in Prometheus format for monitoring
       operationId: getMetrics
       responses:
-        '200':
+        "200":
           description: Prometheus metrics
           content:
             text/plain:
               schema:
                 type: string
                 description: Prometheus metrics format
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /admin/config/reload:
     post:
@@ -142,24 +142,24 @@ paths:
       description: Manually trigger configuration reload from YAML files
       operationId: reloadConfig
       responses:
-        '200':
+        "200":
           description: Configuration reloaded successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConfigReloadResponse'
-        '400':
+                $ref: "#/components/schemas/ConfigReloadResponse"
+        "400":
           description: Configuration validation failed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
@@ -212,7 +212,7 @@ components:
         keys:
           type: array
           items:
-            $ref: '#/components/schemas/KeyStatus'
+            $ref: "#/components/schemas/KeyStatus"
 
     KeyStatus:
       type: object

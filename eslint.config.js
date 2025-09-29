@@ -4,13 +4,7 @@ import globals from "globals";
 
 export default [
   {
-    ignores: [
-      "node_modules/**",
-      "bun.lock",
-      "dist/**",
-      "coverage/**",
-      "build/**"
-    ],
+    ignores: ["node_modules/**", "bun.lock", "dist/**", "coverage/**", "build/**"],
   },
   {
     files: ["**/*.ts"],

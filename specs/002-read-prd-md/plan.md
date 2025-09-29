@@ -1,7 +1,7 @@
 # Implementation Plan: Gemini OpenAI-Compatible Proxy Server
 
-**Branch**: `002-read-prd-md` | **Date**: 2025-09-29 | **Spec**: `specs/002-read-prd-md/spec.md`
-**Input**: Product requirements from `PRD.md`
+**Branch**: `002-read-prd-md` | **Date**: 2025-09-29 | **Spec**: [`specs/002-read-prd-md/spec.md`](./spec.md)
+**Input**: Feature specification from `/specs/002-read-prd-md/spec.md`
 
 ## Execution Flow (/plan command scope)
 
@@ -9,16 +9,16 @@
 1. Load feature spec from Input path
    → If not found: ERROR "No feature spec at {path}"
 2. Fill Technical Context (scan for NEEDS CLARIFICATION)
-   → Detect project type (single-service Bun backend)
+   → Detect Project Type from file system structure or context (web=frontend+backend, mobile=app+api)
    → Set Structure Decision based on project type
-3. Fill the Constitution Check section based on available guardrails or flag missing constitution file
+3. Fill the Constitution Check section based on the content of the constitution document.
 4. Evaluate Constitution Check section below
    → If violations exist: Document in Complexity Tracking
    → If no justification possible: ERROR "Simplify approach first"
    → Update Progress Tracking: Initial Constitution Check
 5. Execute Phase 0 → research.md
    → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
-6. Execute Phase 1 → contracts, data-model.md, quickstart.md, CLAUDE.md updates
+6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code or `AGENTS.md` for opencode).
 7. Re-evaluate Constitution Check section
    → If new violations: Refactor design, return to Phase 1
    → Update Progress Tracking: Post-Design Constitution Check
@@ -33,26 +33,28 @@
 
 ## Summary
 
-Build a Bun-based proxy at `http://localhost:4806/v1` that forwards OpenAI-compatible requests to the Gemini API while preserving payload schemas. Implement automated key rotation with health scoring, circuit breaking, persistence to SQLite (with JSON export fallback), and operational observability (metrics, logs, admin endpoints) so teams can rely on Gemini through existing OpenAI SDKs without configuration drift.
+The feature delivers a Bun-hosted proxy at `http://localhost:4806/v1` that mirrors OpenAI APIs while forwarding traffic to the Gemini upstream. It must provide transparent schema compatibility, automated key rotation with circuit breaking, persistence-backed health tracking, and operational tooling (metrics, logs, admin endpoints) so existing OpenAI clients can adopt Gemini without code changes.
 
 ## Technical Context
 
-**Language/Version**: TypeScript on Bun 1.x runtime (ESM)
-**Primary Dependencies**: `Bun.serve`, `bun:sqlite`, YAML parser (e.g., `yaml`), Prometheus metrics exporter, structured logging utilities
-**Storage**: SQLite snapshots for key state + optional JSON export/import files
-**Testing**: `bun test` for unit/integration suites; contract tests validating OpenAI schema parity
-**Target Platform**: Headless server (macOS/Linux) hosting Bun proxy at `localhost:4806`
-**Project Type**: single
-**Performance Goals**: <100 ms added latency per proxied request; automated key recovery within 5 minutes
-**Constraints**: ≥99% of traffic routed via healthy keys, graceful degradation to informative 503 when all keys fail, secrets never logged
-**Scale/Scope**: Single proxy service managing multiple Gemini keys for backend/ops workloads under rate limits
+**Language/Version**: TypeScript 5.x on Bun 1.x runtime  
+**Primary Dependencies**: `undici` (HTTP client), `pino` (logging), `prom-client` (metrics), `yaml` (configuration)  
+**Storage**: SQLite (primary state store) with JSON export/import fallback  
+**Testing**: `bun test` covering unit and contract suites in `tests/`  
+**Target Platform**: Headless Bun service on Linux/macOS servers bound to `0.0.0.0:4806`
+**Project Type**: Single backend proxy service  
+**Performance Goals**: <100 ms additional latency overhead, ≤10 s total request timeout, ≥99% successful routed requests  
+**Constraints**: 10 MB default payload cap, static admin bearer token, immediate key rotation on Gemini 429, graceful shutdown with state persistence  
+**Scale/Scope**: Supports dozens of concurrent client integrations with multi-key rotation and ops observability requirements
 
 ## Constitution Check
 
-- Gate 1: Confirm plan stays within a single Bun service and avoids unnecessary additional projects or frameworks.
-- Gate 2: Ensure security practices (secret masking, admin auth) are captured before implementation.
-- Gate 3: Require persistence strategy (SQLite + JSON fallback) to be validated during research before any coding.
-- Note: `/memory/constitution.md` not found in repo; confirm with stakeholders if additional guardrails are required.
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+- **Core Principles**: Project constitution template (`.specify/memory/constitution.md`) contains no enforced principles; default to repository guidelines in `MEMORY/AGENTS.md` (TypeScript style, testing, security). No conflicts detected.
+- **Governance**: Existing artifacts (`research.md`, `data-model.md`, `contracts/`, `quickstart.md`) adhere to repo conventions—no additional structures or dependencies beyond scope.
+- **Risk Review**: Key rotation, persistence, and observability decisions stay within Bun + SQLite stack; no mandates violated.
+- **Status**: PASS (initial and post-design)
 
 ## Project Structure
 
@@ -60,158 +62,125 @@ Build a Bun-based proxy at `http://localhost:4806/v1` that forwards OpenAI-compa
 
 ```
 specs/002-read-prd-md/
-├── plan.md              # This file (/plan command output)
-├── research.md          # Phase 0 output (/plan command)
-├── data-model.md        # Phase 1 output (/plan command)
-├── quickstart.md        # Phase 1 output (/plan command)
-├── contracts/           # Phase 1 output (/plan command)
-└── tasks.md             # Phase 2 output (/tasks command - NOT created by /plan)
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
+│   ├── proxy-api.yaml
+│   └── admin-api.yaml
+└── tasks.md
 ```
 
 ### Source Code (repository root)
 
 ```
 src/
-├── server/              # Bun server bootstrap and graceful shutdown logic
-├── router/              # Request normalization, path mapping, retry policies
-├── keys/                # Key manager, rotation strategies, admin controls
-├── health/              # Health scoring, rolling window metrics, circuit breaker
-├── persistence/         # SQLite + JSON adapters, schema migrations
-├── observability/       # Logging, Prometheus metrics, debug endpoints
-├── admin/               # HTTP handlers for key management actions
-└── types/               # Shared TypeScript definitions and schema adapters
-
-config/
-└── keys.yaml            # Example YAML configuration with API keys and metadata
+├── server/
+│   └── server.ts
+├── router/
+├── keys/
+├── health/
+├── admin/
+├── persistence/
+├── observability/
+└── types/
 
 tests/
-├── unit/                # Key manager, circuit breaker, persistence unit tests
-├── integration/         # End-to-end proxy flows, failover scenarios
-└── contract/            # OpenAI schema conformance tests
+├── contract/
+│   └── proxy-api.test.ts
+└── integration/
+
+config/
+└── (expected YAML configuration for keys and proxy runtime)
+
+specs/002-read-prd-md/
+└── (documents listed above)
 ```
 
-**Structure Decision**: Single Bun backend service organized under `src/` with domain-oriented folders and shared tests under `tests/`.
+**Structure Decision**: Single-service backend under `src/` with domain-focused folders (router, keys, persistence, observability) and supporting contract/integration tests under `tests/`.
 
 ## Phase 0: Outline & Research
 
-1. **Extract unknowns from Technical Context**:
+1. Confirmed runtime, storage, configuration, and resilience decisions in `research.md` with trade-off analysis for Bun, SQLite, YAML hot reloads, and circuit breaker thresholds.
+2. Captured integration patterns for OpenAI SDK compatibility, Prometheus metrics exposure, and graceful shutdown to meet observability and reliability goals.
+3. All clarifications from the spec are resolved—no outstanding unknowns; research artifacts ready for downstream design.
 
-   - Health scoring formula weighting (success/failure windows).
-   - Bun-compatible Prometheus metrics exporter integration.
-   - SQLite durability and concurrency best practices under Bun.
-   - YAML hot-reload approach using Bun (SIGHUP vs HTTP endpoint).
-   - Mapping Gemini responses to OpenAI schema, including error envelopes.
-   - Security model for admin endpoints (token vs IP allowlist).
+### Phase 0 Output
 
-2. **Generate and dispatch research agents**:
-
-   - "Research weighted moving average health scoring for API key rotation in rate-limited environments".
-   - "Find best practices for exposing Prometheus metrics from Bun HTTP servers".
-   - "Investigate SQLite usage patterns with `bun:sqlite` for concurrent writes".
-   - "Evaluate safe YAML hot-reload strategies under Bun without downtime".
-   - "Document Gemini ↔ OpenAI response mapping differences".
-   - "Assess lightweight auth mechanisms for Bun admin endpoints".
-
-3. **Consolidate findings** in `research.md` using Decision/Rationale/Alternatives format; resolve all NEEDS CLARIFICATION items before moving to Phase 1.
-
-**Output**: `research.md` with finalized technology choices, algorithms, and operational guardrails.
+- `specs/002-read-prd-md/research.md` (complete)
 
 ## Phase 1: Design & Contracts
 
-_Prerequisites: research.md complete_
+### Prerequisites
 
-1. **Extract entities** into `data-model.md`:
+- `research.md` complete
 
-   - API Key Profile (metadata, weights, cooldowns, persistent IDs).
-   - Key Health Snapshot (rolling metrics, score, last failure).
-   - Proxy Request Session (request metadata, selected key, latency, outcome).
-   - Operational Snapshot (persisted state, config versioning, timestamps).
-   - Any auxiliary entities for retries, cooldown schedules, and admin audit logs.
+1. `data-model.md` enumerates API Key, Health Score, Request Metrics, Circuit Breaker State, and Configuration entities with validation and SQLite schema definitions to support persistence and rotation logic.
+2. `contracts/proxy-api.yaml` and `contracts/admin-api.yaml` outline OpenAI-compatible proxy endpoints plus admin/metrics routes required for operational control.
+3. Contract coverage drives `tests/contract/proxy-api.test.ts` scaffolding (failing until implementation) to enforce schema fidelity and error handling expectations.
+4. `quickstart.md` traces acceptance criteria, edge cases (all keys unhealthy, oversized payloads), and performance validation steps runnable via curl/OpenAI SDK to prove the feature end-to-end.
+5. **TODO**: After plan approval, run `.specify/scripts/bash/update-agent-context.sh kilocode` to sync AI helper context with finalized tech stack.
 
-2. **Generate API contracts** in `/contracts/`:
+### Phase 1 Output
 
-   - Proxy interface summary (OpenAI-compatible schema references).
-   - Admin endpoints: list keys, enable/disable, reprioritize.
-   - Metrics endpoint (`/metrics`) output format.
-   - Health status endpoint (`/healthz` / `/readyz`) payload.
-   - Configuration reload endpoint (if HTTP-based) including auth expectations.
-
-3. **Generate contract tests**:
-
-   - One `bun test` file per endpoint (admin, metrics, health).
-   - Include schema assertions for translated Gemini responses and error mappings.
-   - Ensure tests fail pending implementation (mock upstream behavior where needed).
-
-4. **Extract test scenarios** for integration coverage:
-
-   - Successful proxy request with response translation.
-   - Key rotation after 429/5xx failures with cooldown enforcement.
-   - All keys unhealthy returning 503 with diagnostic payload.
-   - Hot config reload with in-flight requests.
-   - Persistence recovery across restart.
-
-5. **Update agent file incrementally**:
-   - Run `.specify/scripts/bash/update-agent-context.sh kilocode` with new technologies/process updates.
-   - Append only new context relevant to Gemini proxy without duplicating existing guidance.
-
-**Output**: `data-model.md`, `/contracts/*`, failing contract + integration tests, `quickstart.md`, updated `CLAUDE.md` context.
+- `data-model.md`
+- `contracts/*.yaml`
+- `quickstart.md`
+- Contract tests (existing but still failing until implementation)
 
 ## Phase 2: Task Planning Approach
 
-_This section describes what the /tasks command will do - DO NOT execute during /plan_
+This section describes what the /tasks command will do; do not execute it during `/plan`.
 
 **Task Generation Strategy**:
 
-- Load `.specify/templates/tasks-template.md` as base.
-- Derive tasks from Phase 1 docs: each contract/test scenario becomes a task.
-- Separate tasks for implementing key rotation, health scorer, persistence adapter, admin & metrics endpoints, logging, and shutdown flow.
-- Mark prerequisites (e.g., persistence before health scoring) and identify parallelizable efforts (metrics vs admin endpoints).
+- Load `.specify/templates/tasks-template.md` as base input.
+- Derive development tasks from `data-model.md`, `contracts/*.yaml`, and `quickstart.md` artifacts.
+- Map each contract endpoint to contract test + implementation tasks, each entity to persistence/service tasks [P], and each acceptance scenario to integration test + fulfillment tasks.
 
 **Ordering Strategy**:
 
-- TDD-first: write/enable tests before implementation.
-- Build persistence foundation → key manager → health monitor → router/circuit breaker → observability.
-- Integrate configuration reload and security controls after core proxy path is stable.
+- Enforce TDD: extend contract/integration tests before implementing proxy, rotation, persistence behaviors.
+- Sequence persistence primitives (SQLite schema, repository) before router/health services; follow with admin/observability layers.
+- Flag independent YAML config tooling and metrics instrumentation tasks as [P] for parallel execution once core proxy loop exists.
 
-**Estimated Output**: 25-30 numbered tasks in `tasks.md`, grouped by subsystem with [P] markers for parallel candidates.
+**Estimated Output**: ~25-30 ordered tasks captured in `specs/002-read-prd-md/tasks.md` by `/tasks` command.
 
-**IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan.
+**IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
 ## Phase 3+: Future Implementation
 
-_These phases are beyond the scope of the /plan command_
+**Note:** These phases are beyond the scope of the /plan command
 
-**Phase 3**: Task execution (/tasks command creates tasks.md)
-**Phase 4**: Implementation (execute tasks following constitutional principles)
-**Phase 5**: Validation (run bun tests, exercise quickstart.md, verify performance targets)
+**Phase 3**: Task execution (/tasks command creates tasks.md)  
+**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
+**Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
 
-_No deviations identified; leave empty unless Constitution Check flags issues._
+*No deviations from constitutional or repository guidelines identified.*
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
-| --------- | ---------- | ------------------------------------ |
+|-----------|------------|-------------------------------------|
+| None | – | – |
 
 ## Progress Tracking
 
-_This checklist is updated during execution flow_
+**Note:** This checklist is updated during execution flow
 
 **Phase Status**:
 
-- [ ] Phase 0: Research complete (/plan command)
-- [ ] Phase 1: Design complete (/plan command)
-- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [x] Phase 0: Research complete (/plan command)
+- [x] Phase 1: Design complete (/plan command)
+- [x] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
 
-- [ ] Initial Constitution Check: PASS
-- [ ] Post-Design Constitution Check: PASS
-- [ ] All NEEDS CLARIFICATION resolved
-- [ ] Complexity deviations documented
-
----
-
-_Based on Constitution v2.1.1 - confirm guardrails once `/memory/constitution.md` is provided_
+- [x] Initial Constitution Check: PASS
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented

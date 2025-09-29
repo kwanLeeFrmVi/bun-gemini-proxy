@@ -16,6 +16,7 @@ This guide validates the core user scenarios from the feature specification thro
 ### 1. Configuration
 
 Create `config/keys.yaml`:
+
 ```yaml
 keys:
   - name: "primary-key"
@@ -27,17 +28,18 @@ keys:
 ```
 
 Create `config/proxy.yaml`:
+
 ```yaml
 proxy:
   port: 4806
   host: "localhost"
-  maxPayloadSize: 10485760  # 10MB
+  maxPayloadSize: 10485760 # 10MB
   adminToken: "secure-admin-token"
 
 monitoring:
   healthCheckInterval: 30
   failureThreshold: 3
-  recoveryTime: 300  # 5 minutes
+  recoveryTime: 300 # 5 minutes
 ```
 
 ### 2. Start Server
@@ -47,6 +49,7 @@ bun run index.ts
 ```
 
 Expected output:
+
 ```
 🚀 Gemini Proxy Server started on http://localhost:4806
 📊 Admin endpoints available at /admin/*
@@ -76,11 +79,13 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 ```
 
 **Expected Response**:
+
 - Status: 200 OK
 - Body: Valid OpenAI-compatible chat completion response
 - Headers: Standard OpenAI response headers
 
 **Validation Steps**:
+
 1. ✅ Request accepted and processed
 2. ✅ Response follows OpenAI schema
 3. ✅ Latency under 100ms overhead
@@ -93,6 +98,7 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 **Then**: System automatically routes to healthy keys
 
 **Setup**: Trigger rate limiting on primary key
+
 ```bash
 # Send multiple rapid requests to trigger rate limiting
 for i in {1..10}; do
@@ -104,18 +110,21 @@ wait
 ```
 
 **Check Key Health**:
+
 ```bash
 curl -H "Authorization: Bearer secure-admin-token" \
   http://localhost:4806/admin/keys
 ```
 
 **Expected Behavior**:
+
 1. ✅ Primary key shows degraded health score
 2. ✅ Requests automatically route to backup key
 3. ✅ No service interruption experienced
 4. ✅ Circuit breaker activates after 3 failures
 
 **Validation Steps**:
+
 1. Monitor admin endpoint for key status changes
 2. Verify continued successful responses during rotation
 3. Check logs for key switching events
@@ -128,6 +137,7 @@ curl -H "Authorization: Bearer secure-admin-token" \
 **Then**: Retains all key health scores and usage history
 
 **Setup**: Generate some health data
+
 ```bash
 # Generate mixed success/failure requests
 curl -X POST http://localhost:4806/v1/chat/completions \
@@ -141,12 +151,14 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 ```
 
 **Check Initial State**:
+
 ```bash
 curl -H "Authorization: Bearer secure-admin-token" \
   http://localhost:4806/admin/health
 ```
 
 **Restart Server**:
+
 ```bash
 # Stop server (Ctrl+C)
 # Restart server
@@ -154,12 +166,14 @@ bun run index.ts
 ```
 
 **Validate Persistence**:
+
 ```bash
 curl -H "Authorization: Bearer secure-admin-token" \
   http://localhost:4806/admin/health
 ```
 
 **Expected Results**:
+
 1. ✅ Health scores match pre-restart values
 2. ✅ Request counters preserved
 3. ✅ Circuit breaker states maintained
@@ -172,12 +186,14 @@ curl -H "Authorization: Bearer secure-admin-token" \
 **Then**: Clear diagnostic information available
 
 **Health Check**:
+
 ```bash
 curl -H "Authorization: Bearer secure-admin-token" \
   http://localhost:4806/admin/health
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "healthy",
@@ -193,18 +209,21 @@ curl -H "Authorization: Bearer secure-admin-token" \
 ```
 
 **Detailed Key Status**:
+
 ```bash
 curl -H "Authorization: Bearer secure-admin-token" \
   http://localhost:4806/admin/keys
 ```
 
 **Prometheus Metrics**:
+
 ```bash
 curl -H "Authorization: Bearer secure-admin-token" \
   http://localhost:4806/admin/metrics
 ```
 
 **Validation Checklist**:
+
 1. ✅ Overall system status clearly indicated
 2. ✅ Individual key health scores visible
 3. ✅ Circuit breaker states shown
@@ -215,6 +234,7 @@ curl -H "Authorization: Bearer secure-admin-token" \
 ## Edge Case Testing
 
 ### All Keys Unhealthy
+
 ```bash
 # Disable all keys manually
 curl -X POST -H "Authorization: Bearer secure-admin-token" \
@@ -232,6 +252,7 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 **Expected**: 503 Service Unavailable with clear error message
 
 ### Malformed Requests
+
 ```bash
 # Test oversized payload
 curl -X POST http://localhost:4806/v1/chat/completions \
@@ -242,6 +263,7 @@ curl -X POST http://localhost:4806/v1/chat/completions \
 **Expected**: 413 Payload Too Large
 
 ### Configuration Hot Reload
+
 ```bash
 # Modify config/keys.yaml to add new key
 # Check for automatic reload
@@ -254,6 +276,7 @@ curl -H "Authorization: Bearer secure-admin-token" \
 ## Performance Validation
 
 ### Latency Testing
+
 ```bash
 # Measure proxy overhead
 time curl -X POST http://localhost:4806/v1/chat/completions \
@@ -264,6 +287,7 @@ time curl -X POST http://localhost:4806/v1/chat/completions \
 **Target**: Total response time should show <100ms proxy overhead
 
 ### Concurrent Load Testing
+
 ```bash
 # Test concurrent requests
 for i in {1..50}; do
@@ -296,6 +320,7 @@ wait
 4. **Health degradation**: Monitor circuit breaker states and recovery
 
 ### Log Analysis
+
 ```bash
 # Check server logs for errors
 grep "ERROR" proxy.log

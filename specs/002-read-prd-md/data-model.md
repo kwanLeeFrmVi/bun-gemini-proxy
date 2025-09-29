@@ -6,9 +6,11 @@
 ## Core Entities
 
 ### API Key
+
 Represents a Gemini API key with health tracking and metadata.
 
 **Fields**:
+
 - `id`: string (unique identifier, first 8 chars of key)
 - `key`: string (full API key, masked in logs)
 - `name`: string (human-readable name from config)
@@ -18,12 +20,14 @@ Represents a Gemini API key with health tracking and metadata.
 - `lastUsedAt`: Date (last successful request)
 
 **Validation Rules**:
+
 - `id` must be unique across all keys
 - `key` must start with expected Gemini API key prefix
 - `weight` must be positive integer
 - `name` must be non-empty string
 
 **State Transitions**:
+
 - New → Active (when first configured)
 - Active ↔ Disabled (manual admin control)
 - Active → Circuit Open (automatic on health failure)
@@ -31,9 +35,11 @@ Represents a Gemini API key with health tracking and metadata.
 - Circuit Half-Open → Active (successful recovery)
 
 ### Health Score
+
 Tracks the reliability of an API key over time.
 
 **Fields**:
+
 - `keyId`: string (foreign key to API Key)
 - `score`: number (0.0-1.0, calculated as success/total ratio)
 - `successCount`: number (successful requests in window)
@@ -42,21 +48,25 @@ Tracks the reliability of an API key over time.
 - `lastUpdated`: Date (timestamp of last score update)
 
 **Validation Rules**:
+
 - `score` must be between 0.0 and 1.0
 - `successCount` and `failureCount` must be non-negative
 - `windowStartTime` must be in the past
 - Score recalculated on each request outcome
 
 **Calculation Logic**:
+
 ```typescript
-score = successCount / (successCount + failureCount)
+score = successCount / (successCount + failureCount);
 // Reset window after fixed time period (e.g., 5 minutes)
 ```
 
 ### Request Metrics
+
 Aggregated metrics for monitoring and observability.
 
 **Fields**:
+
 - `keyId`: string (foreign key to API Key)
 - `timestamp`: Date (metric collection time)
 - `requestCount`: number (total requests in period)
@@ -66,19 +76,23 @@ Aggregated metrics for monitoring and observability.
 - `p95Latency`: number (95th percentile response time)
 
 **Validation Rules**:
+
 - All counts must be non-negative
 - `avgLatency` and `p95Latency` must be positive
 - `timestamp` must not be in future
 
 **Aggregation Periods**:
+
 - Real-time: per-request updates
 - Minute: 60-second rolling windows
 - Hour: 60-minute aggregates for dashboards
 
 ### Circuit Breaker State
+
 Tracks the circuit breaker status for each API key.
 
 **Fields**:
+
 - `keyId`: string (foreign key to API Key)
 - `state`: enum (CLOSED, OPEN, HALF_OPEN)
 - `failureCount`: number (consecutive failures)
@@ -87,21 +101,25 @@ Tracks the circuit breaker status for each API key.
 - `openedAt`: Date (when circuit opened)
 
 **Validation Rules**:
+
 - `state` must be valid enum value
 - `failureCount` must be non-negative
 - `nextAttemptTime` must be in future when state is OPEN
 - Failure threshold: 3 consecutive failures
 
 **State Transitions**:
+
 - CLOSED → OPEN: 3 consecutive failures
 - OPEN → HALF_OPEN: automatic after cooldown period
 - HALF_OPEN → CLOSED: successful request
 - HALF_OPEN → OPEN: failed request
 
 ### Configuration
+
 System-wide configuration settings and API key definitions.
 
 **Fields**:
+
 - `proxy`: ProxyConfig (server settings)
 - `keys`: ApiKeyConfig[] (array of key configurations)
 - `monitoring`: MonitoringConfig (health check settings)
@@ -109,6 +127,7 @@ System-wide configuration settings and API key definitions.
 - `version`: string (config file version for change tracking)
 
 **Configuration Types**:
+
 ```typescript
 interface ProxyConfig {
   port: number;
@@ -132,6 +151,7 @@ interface MonitoringConfig {
 ```
 
 **Validation Rules**:
+
 - `port` must be valid port number (1-65535)
 - `maxPayloadSize` must be positive
 - `adminToken` must be non-empty
@@ -140,21 +160,25 @@ interface MonitoringConfig {
 ## Relationships
 
 ### API Key ← Health Score
+
 - One-to-one relationship
 - Health Score created when API Key is added
 - Health Score deleted when API Key is removed
 
 ### API Key ← Request Metrics
+
 - One-to-many relationship
 - Multiple metric records per key over time
 - Metrics retained for historical analysis
 
 ### API Key ← Circuit Breaker State
+
 - One-to-one relationship
 - Circuit Breaker State created when API Key is added
 - State persists across service restarts
 
 ### Configuration → API Key
+
 - Configuration defines available API Keys
 - Changes trigger key pool updates
 - Hot reload preserves existing health data
@@ -162,6 +186,7 @@ interface MonitoringConfig {
 ## Persistence Strategy
 
 ### SQLite Schema
+
 ```sql
 CREATE TABLE api_keys (
   id TEXT PRIMARY KEY,
@@ -207,6 +232,7 @@ CREATE TABLE circuit_breaker_states (
 ```
 
 ### Data Lifecycle
+
 - **Startup**: Load configuration, restore state from SQLite
 - **Runtime**: Update health scores and metrics on each request
 - **Shutdown**: Persist final state to SQLite

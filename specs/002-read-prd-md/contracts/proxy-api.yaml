@@ -21,38 +21,38 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChatCompletionRequest'
+              $ref: "#/components/schemas/ChatCompletionRequest"
       responses:
-        '200':
+        "200":
           description: Successful chat completion
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatCompletionResponse'
-        '400':
+                $ref: "#/components/schemas/ChatCompletionResponse"
+        "400":
           description: Bad request - invalid payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '413':
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
           description: Payload too large
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
           description: Rate limit exceeded on all keys
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '503':
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
           description: Service unavailable - all keys unhealthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /v1/models:
     get:
@@ -60,12 +60,12 @@ paths:
       description: Return list of available Gemini models
       operationId: listModels
       responses:
-        '200':
+        "200":
           description: List of available models
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModelListResponse'
+                $ref: "#/components/schemas/ModelListResponse"
 
 components:
   schemas:
@@ -82,7 +82,7 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/ChatMessage'
+            $ref: "#/components/schemas/ChatMessage"
         max_tokens:
           type: integer
           minimum: 1
@@ -135,9 +135,9 @@ components:
         choices:
           type: array
           items:
-            $ref: '#/components/schemas/ChatChoice'
+            $ref: "#/components/schemas/ChatChoice"
         usage:
-          $ref: '#/components/schemas/UsageStats'
+          $ref: "#/components/schemas/UsageStats"
 
     ChatChoice:
       type: object
@@ -150,7 +150,7 @@ components:
           type: integer
           description: Choice index
         message:
-          $ref: '#/components/schemas/ChatMessage'
+          $ref: "#/components/schemas/ChatMessage"
         finish_reason:
           type: string
           enum: [stop, length, content_filter]
@@ -177,7 +177,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Model'
+            $ref: "#/components/schemas/Model"
 
     Model:
       type: object
