@@ -4,6 +4,9 @@ Auto-generated from all feature plans. Last updated: 2025-09-29
 
 ## Active Technologies
 
+- TypeScript 5.x on Bun 1.x runtime + `undici` (HTTP client), `pino` (logging), `prom-client` (metrics), `yaml` (configuration) (002-read-prd-md)
+- SQLite (primary state store) with JSON export/import fallback (002-read-prd-md)
+
 - TypeScript with Bun runtime (latest stable) + Bun native APIs (Bun.serve, Bun.file, bun:sqlite) (002-read-prd-md)
 
 ## Project Structure
@@ -22,6 +25,8 @@ npm test [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNO
 TypeScript with Bun runtime (latest stable): Follow standard conventions
 
 ## Recent Changes
+
+- 002-read-prd-md: Added TypeScript 5.x on Bun 1.x runtime + `undici` (HTTP client), `pino` (logging), `prom-client` (metrics), `yaml` (configuration)
 
 - 002-read-prd-md: Added TypeScript with Bun runtime (latest stable) + Bun native APIs (Bun.serve, Bun.file, bun:sqlite)
 

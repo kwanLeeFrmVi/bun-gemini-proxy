@@ -1,0 +1,32 @@
+# Proxy server configuration
+proxy:
+  # Host to listen on
+  host: "0.0.0.0"
+  # Port to listen on
+  port: 8000
+  # Admin token for accessing the admin API
+  adminToken: "your-secret-admin-token"
+  # Request timeout in milliseconds
+  requestTimeoutMs: 10000
+  # Base URL for the upstream Gemini API
+  upstreamBaseUrl: "https://generativelanguage.googleapis.com"
+  # Proxy mode: "live" or "mock"
+  mode: "mock"
+
+# Health check and circuit breaker configuration
+monitoring:
+  # Interval for health checks in seconds
+  healthCheckIntervalSeconds: 30
+  # Number of failures before a key is considered unhealthy
+  failureThreshold: 3
+  # Time in seconds before a failing key is retried
+  recoveryTimeSeconds: 300
+  # Time window for counting failures in seconds
+  windowSeconds: 300
+
+# Persistence configuration
+persistence:
+  # Path to the SQLite database file
+  sqlitePath: ".runtime/state.sqlite"
+  # Path to the fallback JSON file
+  fallbackJsonPath: ".runtime/state.json"

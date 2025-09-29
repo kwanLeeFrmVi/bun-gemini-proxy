@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run src/server/server.ts",
+    "start": "bun run index.ts",
     "test": "bun test",
     "lint": "bunx eslint .",
     "lint:fix": "bunx eslint . --fix",
@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@typescript-eslint/eslint-plugin": "^7.17.0",
+    "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^7.17.0",
     "eslint": "^9.9.1",
     "globals": "^15.9.0",
