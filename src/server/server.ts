@@ -139,6 +139,21 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
 
     logger.info({ host: server.hostname, port: server.port }, "Gemini proxy server started");
 
+    // Print user-friendly startup message
+    console.log(`
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  🚀 Gemini Proxy Server is running!                            │
+│                                                                 │
+│  📖 Open user guide: http://${server.hostname}:${server.port}/help                │
+│  🔧 Admin panel:     http://${server.hostname}:${server.port}/admin/health         │
+│  ⚡ API endpoint:     http://${server.hostname}:${server.port}/v1                  │
+│                                                                 │
+│  Press Ctrl+C to stop the server                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+`);
+
     const shutdown = async () => {
       logger.info("Shutting down Gemini proxy server");
       server?.stop(true);
