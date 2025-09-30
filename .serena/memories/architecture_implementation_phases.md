@@ -3,6 +3,7 @@
 ## Core Architecture
 
 ### Request Flow
+
 ```
 Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breaker → Gemini API
                                         ↓
@@ -10,6 +11,7 @@ Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breake
 ```
 
 ### Module Structure
+
 - **HTTP Server** (`server.ts`): Bun.serve() handling async routing
 - **Router** (`router.ts`): Path normalization, header forwarding
 - **Key Manager** (`key-manager.ts`): Round-robin selection, key health
@@ -21,6 +23,7 @@ Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breake
 ## Implementation Phases
 
 ### Phase 1: Core Proxy (Current)
+
 - [x] Project setup with Bun and TypeScript
 - [ ] Basic HTTP server on port 4806
 - [ ] Request forwarding to Gemini API
@@ -29,6 +32,7 @@ Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breake
 - [ ] Structured logging
 
 ### Phase 2: Health & Resilience
+
 - [ ] Health scoring algorithm (0.0-1.0 weighted average)
 - [ ] Circuit breaker implementation
 - [ ] Exponential backoff for failed keys
@@ -36,6 +40,7 @@ Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breake
 - [ ] Automatic retry with alternate keys
 
 ### Phase 3: Observability
+
 - [ ] Prometheus metrics endpoint (`/metrics`)
 - [ ] Health check endpoint (`/health`)
 - [ ] Debug endpoint for key status
@@ -44,6 +49,7 @@ Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breake
 - [ ] JSON export/import for state
 
 ### Phase 4: Production Hardening
+
 - [ ] Configuration hot reload (SIGHUP)
 - [ ] Graceful shutdown handling
 - [ ] Request rate limiting
@@ -54,6 +60,7 @@ Client → HTTP Server (port 4806) → Router → Key Manager → Circuit Breake
 ## Key Technical Decisions
 
 ### Database Schema (SQLite)
+
 ```sql
 CREATE TABLE api_keys (
   id TEXT PRIMARY KEY,
@@ -81,41 +88,46 @@ CREATE TABLE request_logs (
 ```
 
 ### Configuration Format (YAML)
+
 ```yaml
 api_keys:
   - name: "primary"
     key: "sk-..."
-    weight: 2  # Optional: higher weight = more traffic
+    weight: 2 # Optional: higher weight = more traffic
   - name: "secondary"
     key: "sk-..."
-    cooldown_seconds: 300  # Optional: custom cooldown
+    cooldown_seconds: 300 # Optional: custom cooldown
 
 settings:
   health_threshold: 0.3
   max_retries: 2
   timeout_ms: 30000
-  checkpoint_interval: 100  # Save state every N requests
+  checkpoint_interval: 100 # Save state every N requests
 ```
 
 ### API Compatibility Mapping
+
 - Path: `/v1/*` → `https://generativelanguage.googleapis.com/v1beta/openai/*`
 - Headers: Preserve all except Authorization
-- Auth: Inject `x-goog-api-key: {selected_key}`
+- Auth: Inject `Authorization: Bearer {selected_key}`
 - Errors: Map Gemini errors to OpenAI format
 
 ### Health Score Calculation
+
 ```typescript
 // Weighted moving average
-newScore = (0.7 * currentScore) + (0.3 * recentSuccessRate)
+newScore = 0.7 * currentScore + 0.3 * recentSuccessRate;
 // Where recentSuccessRate = successes / (successes + failures) over last N requests
 ```
 
 ### Circuit Breaker States
+
 1. **Closed** (healthy): Normal operation
 2. **Open** (unhealthy): All requests fail fast
 3. **Half-Open** (recovering): Test with limited traffic
 
 ### Performance Targets
+
 - Proxy latency: < 100ms p99
 - Health check: < 10ms
 - Key rotation: < 1ms
@@ -125,18 +137,21 @@ newScore = (0.7 * currentScore) + (0.3 * recentSuccessRate)
 ## Testing Strategy
 
 ### Unit Tests
+
 - Key selection algorithm
 - Health score calculation
 - Circuit breaker state transitions
 - Error classification logic
 
 ### Integration Tests
+
 - End-to-end proxy requests
 - Retry behavior on 429/5xx
 - State persistence/recovery
 - Config hot reload
 
 ### Load Tests
+
 ```bash
 # Using k6 or similar
 k6 run --vus 100 --duration 30s load-test.js
@@ -145,12 +160,14 @@ k6 run --vus 100 --duration 30s load-test.js
 ## Monitoring & Alerts
 
 ### Key Metrics
+
 - `proxy_requests_total{status,key}`
 - `proxy_request_duration_seconds`
 - `api_key_health_score{key}`
 - `circuit_breaker_state{key}`
 
 ### Alert Conditions
+
 - All keys unhealthy > 1 minute
 - Proxy latency > 200ms p99
 - Error rate > 10%

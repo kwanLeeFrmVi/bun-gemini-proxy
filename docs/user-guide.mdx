@@ -1,0 +1,317 @@
+# Gemini Proxy Server - User Guide
+
+Welcome to the Gemini Proxy Server! This service provides OpenAI-compatible endpoints for Google's Gemini AI models.
+
+## Quick Start
+
+### Base URL
+```
+http://localhost:8000/v1
+```
+
+### Authentication
+
+**Access Token**: By default, `/v1` API requests require a valid access token when configured in `config/proxy.yaml`.
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+**Configuration**: Edit `config/proxy.yaml` to manage access tokens:
+```yaml
+proxy:
+  # Add your access tokens here
+  accessTokens:
+    - "sk-proxy-token-1"
+    - "sk-proxy-token-2"
+  # Enable/disable authentication
+  requireAuth: true  # Set to false to disable auth
+```
+
+**Disable Authentication** (for development only):
+```yaml
+proxy:
+  # Option 1: Empty accessTokens array (authentication automatically disabled)
+  accessTokens: []
+
+  # Option 2: Explicitly disable with flag
+  accessTokens: []
+  requireAuth: false
+```
+
+**Note**: When `accessTokens` is empty, authentication is automatically disabled regardless of `requireAuth` setting.
+
+## Endpoints
+
+### 1. Chat Completions
+
+#### Non-Streaming
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test-key" \
+  -d '{
+    "model": "gemini-2.0-flash-exp",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
+```
+
+#### Streaming
+```bash
+curl -N http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test-key" \
+  -d '{
+    "model": "gemini-2.0-flash-exp",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ],
+    "stream": true
+  }'
+```
+
+### 2. List Models
+```bash
+curl http://localhost:8000/v1/models \
+  -H "Authorization: Bearer test-key"
+```
+
+### 3. Get Model Details
+```bash
+curl http://localhost:8000/v1/models/gemini-2.0-flash-exp \
+  -H "Authorization: Bearer test-key"
+```
+
+### 4. Embeddings
+```bash
+curl http://localhost:8000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer test-key" \
+  -d '{
+    "input": "Your text here",
+    "model": "text-embedding-004"
+  }'
+```
+
+## Using with OpenAI SDK
+
+### JavaScript/TypeScript (Bun/Node.js)
+```javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  apiKey: 'any-key',
+  baseURL: 'http://localhost:8000/v1',
+});
+
+// Non-streaming
+const response = await client.chat.completions.create({
+  model: 'gemini-2.0-flash-exp',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+console.log(response.choices[0].message.content);
+
+// Streaming
+const stream = await client.chat.completions.create({
+  model: 'gemini-2.0-flash-exp',
+  messages: [{ role: 'user', content: 'Hello!' }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.choices[0]?.delta?.content || '');
+}
+```
+
+### Python
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key='any-key',
+    base_url='http://localhost:8000/v1'
+)
+
+# Non-streaming
+response = client.chat.completions.create(
+    model='gemini-2.0-flash-exp',
+    messages=[{'role': 'user', 'content': 'Hello!'}]
+)
+print(response.choices[0].message.content)
+
+# Streaming
+stream = client.chat.completions.create(
+    model='gemini-2.0-flash-exp',
+    messages=[{'role': 'user', 'content': 'Hello!'}],
+    stream=True
+)
+
+for chunk in stream:
+    print(chunk.choices[0].delta.content or '', end='')
+```
+
+## Available Models
+
+The proxy supports all Gemini models available through the API:
+
+- `gemini-2.5-pro` - Most capable model
+- `gemini-2.5-flash` - Fast and efficient
+- `gemini-2.0-flash-exp` - Experimental features
+- `gemini-1.5-pro` - Previous generation
+- `gemini-1.5-flash` - Previous generation fast model
+- `text-embedding-004` - Text embeddings
+
+Use `/v1/models` endpoint to get the full list of available models.
+
+## Features
+
+### Key Rotation
+The proxy automatically rotates between multiple API keys to:
+- Avoid rate limits
+- Maximize uptime
+- Handle key failures gracefully
+
+### Health Monitoring
+- Tracks success/failure rates per key
+- Automatically disables unhealthy keys
+- Re-enables keys after recovery period
+
+### Circuit Breaking
+- Detects failing keys after 3 consecutive failures
+- Routes requests to healthy keys
+- Returns 503 when all keys are unhealthy
+
+## Configuration
+
+### Proxy Settings
+Edit `config/proxy.yaml`:
+```yaml
+proxy:
+  host: "0.0.0.0"
+  port: 8000
+  mode: "live"  # or "mock" for testing
+  requestTimeoutMs: 10000
+  upstreamBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/"
+```
+
+### API Keys
+Edit `config/keys.yaml`:
+```yaml
+keys:
+  - name: "key-1"
+    key: "YOUR_GEMINI_API_KEY"
+    weight: 1
+    cooldownSeconds: 30
+  - name: "key-2"
+    key: "ANOTHER_KEY"
+    weight: 1
+    cooldownSeconds: 30
+```
+
+### Health Monitoring
+```yaml
+monitoring:
+  healthCheckIntervalSeconds: 30
+  failureThreshold: 3
+  recoveryTimeSeconds: 300
+  windowSeconds: 300
+```
+
+## Response Format
+
+All responses follow OpenAI's format for compatibility with existing SDKs.
+
+### Chat Completion Response
+```json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "created": 1234567890,
+  "model": "gemini-2.0-flash-exp",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Response text"
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 20,
+    "total_tokens": 30
+  }
+}
+```
+
+### Streaming Response (SSE)
+```
+data: {"choices":[{"delta":{"content":"Hello","role":"assistant"},"index":0}],...}
+
+data: {"choices":[{"delta":{"content":" world","role":"assistant"},"index":0}],...}
+
+data: [DONE]
+```
+
+## Error Handling
+
+### Common Errors
+
+**503 Service Unavailable**
+- All API keys are unhealthy
+- Check key validity and rate limits
+
+**413 Payload Too Large**
+- Request exceeds 10MB limit
+- Reduce message size
+
+**429 Too Many Requests**
+- Rate limit exceeded on all keys
+- Wait and retry
+
+**502 Bad Gateway**
+- Upstream Gemini API unreachable
+- Check network connectivity
+
+## Troubleshooting
+
+### Streaming Not Working
+- Ensure you're using `-N` flag with curl
+- Check that `stream: true` is in request body
+- Verify OpenAI SDK version supports streaming
+
+### Key Rotation Issues
+- Check `config/keys.yaml` has valid keys
+- Monitor logs for key health status
+- Verify keys haven't exceeded quotas
+
+### Performance Issues
+- Increase `requestTimeoutMs` in config
+- Add more API keys for load distribution
+- Check upstream Gemini API status
+
+## Admin Endpoints
+
+### Health Check
+```bash
+curl http://localhost:8000/health
+```
+
+### Metrics (Prometheus)
+```bash
+curl http://localhost:8000/metrics
+```
+
+## Support
+
+For issues and questions:
+- GitHub: [github.com/your-repo/bun-gemini-proxy](https://github.com)
+- Documentation: See `PRD.md` and `specs/` directory
+- Logs: Check console output for detailed error information
+
+---
+
+**Server Version**: 1.0.0
+**Last Updated**: 2025-09-30

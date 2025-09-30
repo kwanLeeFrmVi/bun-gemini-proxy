@@ -1,0 +1,317 @@
+openapi: 3.0.3
+info:
+  title: Gemini Proxy Admin API
+  description: Administrative endpoints for monitoring and managing the proxy server
+  version: 1.0.0
+  contact:
+    name: Operations Team
+
+servers:
+  - url: http://localhost:4806
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /admin/health:
+    get:
+      summary: Get system health status
+      description: Returns health status of all API keys and system metrics
+      operationId: getHealthStatus
+      responses:
+        "200":
+          description: System health information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatusResponse"
+        "401":
+          description: Unauthorized - invalid or missing bearer token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/keys:
+    get:
+      summary: List API keys status
+      description: Returns status and health information for all configured API keys
+      operationId: listKeysStatus
+      responses:
+        "200":
+          description: API keys status information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeysStatusResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/keys/{keyId}/enable:
+    post:
+      summary: Enable API key
+      description: Manually enable a disabled API key
+      operationId: enableKey
+      parameters:
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: API key identifier
+      responses:
+        "200":
+          description: Key enabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyOperationResponse"
+        "404":
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/keys/{keyId}/disable:
+    post:
+      summary: Disable API key
+      description: Manually disable an API key
+      operationId: disableKey
+      parameters:
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: API key identifier
+      responses:
+        "200":
+          description: Key disabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyOperationResponse"
+        "404":
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/metrics:
+    get:
+      summary: Get Prometheus metrics
+      description: Returns metrics in Prometheus format for monitoring
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus metrics format
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/config/reload:
+    post:
+      summary: Reload configuration
+      description: Manually trigger configuration reload from YAML files
+      operationId: reloadConfig
+      responses:
+        "200":
+          description: Configuration reloaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigReloadResponse"
+        "400":
+          description: Configuration validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Static bearer token configured in proxy settings
+
+  schemas:
+    HealthStatusResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - uptime
+        - keys
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall system health
+        timestamp:
+          type: string
+          format: date-time
+          description: Status check timestamp
+        uptime:
+          type: integer
+          description: Uptime in seconds
+        keys:
+          type: object
+          properties:
+            total:
+              type: integer
+              description: Total configured keys
+            healthy:
+              type: integer
+              description: Number of healthy keys
+            unhealthy:
+              type: integer
+              description: Number of unhealthy keys
+            disabled:
+              type: integer
+              description: Number of manually disabled keys
+
+    KeysStatusResponse:
+      type: object
+      required:
+        - keys
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeyStatus"
+
+    KeyStatus:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - health_score
+        - last_used
+      properties:
+        id:
+          type: string
+          description: Key identifier (masked)
+        name:
+          type: string
+          description: Human-readable key name
+        status:
+          type: string
+          enum: [active, disabled, circuit_open, circuit_half_open]
+          description: Current key status
+        health_score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Health score (0.0-1.0)
+        last_used:
+          type: string
+          format: date-time
+          description: Last successful request timestamp
+        failure_count:
+          type: integer
+          description: Consecutive failures
+        next_retry:
+          type: string
+          format: date-time
+          description: Next retry time for circuit breaker
+          nullable: true
+
+    KeyOperationResponse:
+      type: object
+      required:
+        - success
+        - message
+        - key_id
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+        message:
+          type: string
+          description: Operation result message
+        key_id:
+          type: string
+          description: Key identifier
+
+    ConfigReloadResponse:
+      type: object
+      required:
+        - success
+        - timestamp
+        - changes
+      properties:
+        success:
+          type: boolean
+          description: Reload success status
+        timestamp:
+          type: string
+          format: date-time
+          description: Reload timestamp
+        changes:
+          type: object
+          properties:
+            keys_added:
+              type: integer
+              description: Number of new keys added
+            keys_removed:
+              type: integer
+              description: Number of keys removed
+            keys_updated:
+              type: integer
+              description: Number of keys updated
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - message
+            - type
+          properties:
+            message:
+              type: string
+              description: Human-readable error message
+            type:
+              type: string
+              description: Error type identifier
+            code:
+              type: string
+              description: Error code
