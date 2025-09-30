@@ -97,8 +97,8 @@ export class GeminiCLIRouter {
         );
       }
 
-      // Convert messages to prompt
-      const prompt = this.transformer.messagesToPrompt(body.messages);
+      // Convert messages to prompt and extract images (gemini CLI doesn't support images yet)
+      const { prompt } = this.transformer.messagesToPrompt(body.messages);
       const normalizedModel = this.transformer.normalizeModel(body.model);
 
       logger.info(

@@ -1,6 +1,7 @@
 import type { ProxyConfig } from "../../types/config.ts";
 import { CodexCLIClient } from "./codex-cli-client.ts";
 import { CLITransformer, type OpenAIChatRequest } from "./cli-transformer.ts";
+import { SSETransformer } from "./sse-transformer.ts";
 import { errorResponse, jsonResponse } from "../responses.ts";
 import { logger } from "../../observability/logger.ts";
 import {
@@ -25,14 +26,10 @@ export class CodexCLIRouter {
   private readonly transformer: CLITransformer;
   private readonly cliTimeoutMs: number = 120000; // 2 minutes for agent operations
 
-  // Codex supports various Claude models
+  // Codex supports GPT-5 models (reasoning effort is passed via model_reasoning_effort parameter)
   private readonly supportedModels = [
-    "claude-sonnet-4",
-    "claude-sonnet-4-5",
-    "claude-opus-4",
-    "claude-haiku-4",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-opus-20240229",
+    "gpt-5-codex",
+    "gpt-5",
   ];
 
   constructor(options: CodexCLIRouterOptions) {
@@ -93,14 +90,8 @@ export class CodexCLIRouter {
         );
       }
 
-      // Check streaming not supported
-      if (body.stream === true) {
-        return errorResponse(
-          "Streaming is not supported by codex CLI backend. Use stream=false.",
-          400,
-          "invalid_request_error",
-        );
-      }
+      // Handle streaming vs non-streaming
+      const isStreaming = body.stream === true;
 
       // Validate model
       if (!this.isModelSupported(body.model)) {
@@ -111,19 +102,37 @@ export class CodexCLIRouter {
         );
       }
 
-      // Convert messages to prompt
-      const prompt = this.transformer.messagesToPrompt(body.messages);
+      // Convert messages to prompt and extract images
+      const { prompt, images } = this.transformer.messagesToPrompt(body.messages);
       const normalizedModel = body.model;
 
       logger.info(
-        { model: normalizedModel, messageCount: body.messages.length },
+        {
+          model: normalizedModel,
+          messageCount: body.messages.length,
+          reasoningEffort: body.reasoning_effort,
+          imageCount: images.length,
+          streaming: isStreaming,
+        },
         "Processing chat completion via Codex CLI",
       );
 
-      // Execute CLI command with extended timeout
+      // Handle streaming response
+      if (isStreaming) {
+        return this.handleStreamingResponse(
+          prompt,
+          normalizedModel,
+          body.reasoning_effort,
+          images.length > 0 ? images : undefined,
+        );
+      }
+
+      // Execute CLI command with extended timeout (non-streaming)
       const cliResponse = await this.cliClient.execute({
         prompt,
         model: normalizedModel,
+        reasoningEffort: body.reasoning_effort,
+        images: images.length > 0 ? images : undefined,
         timeoutMs: this.cliTimeoutMs,
       });
 
@@ -203,7 +212,7 @@ export class CodexCLIRouter {
           id: modelId,
           object: "model" as const,
           created,
-          owned_by: "anthropic",
+          owned_by: "openai",
         })),
       };
 
@@ -238,6 +247,61 @@ export class CodexCLIRouter {
       logger.error({ error }, "Health check failed");
       return jsonResponse({ status: "unhealthy", error: "Health check failed" }, { status: 503 });
     }
+  }
+
+  /**
+   * Handle streaming response from Codex CLI
+   */
+  private handleStreamingResponse(
+    prompt: string,
+    model: string,
+    reasoningEffort?: "minimal" | "low" | "medium" | "high",
+    images?: string[],
+  ): Response {
+    const transformer = new SSETransformer(model);
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Send initial chunk with role
+          controller.enqueue(new TextEncoder().encode(transformer.createInitialChunk(model)));
+
+          // Stream content chunks as they arrive from codex CLI
+          const cliClient = new CodexCLIClient();
+          for await (const content of cliClient.executeStreaming({
+            prompt,
+            model,
+            reasoningEffort,
+            images,
+          })) {
+            controller.enqueue(
+              new TextEncoder().encode(transformer.createContentChunk(model, content))
+            );
+          }
+
+          // Send final chunk and done message
+          controller.enqueue(new TextEncoder().encode(transformer.createFinalChunk(model)));
+          controller.enqueue(new TextEncoder().encode(transformer.createDoneMessage()));
+
+          controller.close();
+        } catch (error) {
+          logger.error({ error }, "Streaming error");
+          controller.error(error);
+        }
+      },
+      cancel() {
+        logger.info("Client disconnected from stream");
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no", // Disable nginx buffering
+      },
+    });
   }
 
   /**

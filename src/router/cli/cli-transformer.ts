@@ -7,7 +7,14 @@ export interface OpenAIChatRequest {
   model: string;
   messages: Array<{
     role: "system" | "user" | "assistant";
-    content: string;
+    content: string | Array<{
+      type: "text" | "image_url";
+      text?: string;
+      image_url?: {
+        url: string;
+        detail?: "auto" | "low" | "high";
+      };
+    }>;
   }>;
   temperature?: number;
   max_tokens?: number;
@@ -15,6 +22,7 @@ export interface OpenAIChatRequest {
   top_p?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
+  reasoning_effort?: "minimal" | "low" | "medium" | "high";
 }
 
 /**
@@ -63,18 +71,43 @@ export class CLITransformer {
 
   /**
    * Convert OpenAI messages array to single prompt string
+   * Returns both the text prompt and any image URLs found
    */
-  messagesToPrompt(messages: OpenAIChatRequest["messages"]): string {
-    return messages
+  messagesToPrompt(messages: OpenAIChatRequest["messages"]): { prompt: string; images: string[] } {
+    const images: string[] = [];
+
+    const prompt = messages
       .map(msg => {
         const rolePrefix = msg.role === "system"
           ? "System: "
           : msg.role === "user"
           ? "User: "
           : "Assistant: ";
-        return `${rolePrefix}${msg.content}`;
+
+        // Handle both string content and multi-part content
+        if (typeof msg.content === "string") {
+          return `${rolePrefix}${msg.content}`;
+        } else {
+          // Extract text and image URLs from multi-part content
+          const textParts = msg.content
+            .map(part => {
+              if (part.type === "text" && part.text) {
+                return part.text;
+              } else if (part.type === "image_url" && part.image_url?.url) {
+                images.push(part.image_url.url);
+                return "[Image attached]";
+              }
+              return "";
+            })
+            .filter(Boolean)
+            .join(" ");
+
+          return `${rolePrefix}${textParts}`;
+        }
       })
       .join("\n\n");
+
+    return { prompt, images };
   }
 
   /**

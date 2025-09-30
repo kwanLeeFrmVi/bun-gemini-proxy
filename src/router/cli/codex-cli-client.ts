@@ -10,6 +10,8 @@ export interface CodexCLIResponse {
 export interface CodexCLIExecutionOptions {
   prompt: string;
   model?: string;
+  reasoningEffort?: "minimal" | "low" | "medium" | "high";
+  images?: string[]; // File paths to images
   timeoutMs?: number;
   workingDir?: string;
 }
@@ -19,34 +21,145 @@ export interface CodexCLIExecutionOptions {
  * Supports OpenAI-style chat completions via CLI wrapper
  */
 export class CodexCLIClient {
-  private readonly defaultModel: string = "claude-sonnet-4";
+  private readonly defaultModel: string = "gpt-5-codex";
   private readonly defaultTimeoutMs: number = 120000; // 2 minutes for agent operations
 
   /**
-   * Execute codex CLI command and parse JSON output
+   * Execute codex CLI command and stream output line-by-line
+   * Yields agent messages as they arrive
+   */
+  async *executeStreaming(options: CodexCLIExecutionOptions): AsyncGenerator<string, void, unknown> {
+    const {
+      prompt,
+      model,
+      reasoningEffort,
+      images,
+      workingDir,
+    } = options;
+
+    logger.info({
+      model,
+      reasoningEffort,
+      promptLength: prompt.length,
+      imageCount: images?.length || 0
+    }, "Executing codex CLI command (streaming)");
+
+    // Build command with config overrides and experimental JSON output
+    const args: string[] = [];
+
+    // Disable MCP servers to speed up execution and reduce noise
+    args.push("-c", "mcp_servers={}");
+
+    // Add model config override
+    if (model) {
+      args.push("-c", `model="${model}"`);
+    }
+
+    // Add reasoning effort config override
+    if (reasoningEffort) {
+      args.push("-c", `model_reasoning_effort="${reasoningEffort}"`);
+    }
+
+    // Add images
+    if (images && images.length > 0) {
+      for (const imagePath of images) {
+        args.push("-i", imagePath);
+      }
+    }
+
+    // Add working directory
+    if (workingDir) {
+      args.push("-C", workingDir);
+    }
+
+    // Add exec command with prompt and JSON output
+    args.push("exec", prompt, "--experimental-json");
+
+    try {
+      // Stream output line-by-line using Bun's .lines() API
+      for await (const line of $`codex ${args}`.lines()) {
+        if (!line.trim()) continue;
+
+        try {
+          const parsed = JSON.parse(line);
+
+          // Yield assistant messages as they arrive
+          // Format: {"type":"item.completed","item":{"id":"item_N","item_type":"assistant_message","text":"..."}}
+          if (parsed.type === "item.completed" && parsed.item) {
+            if (parsed.item.item_type === "assistant_message" && parsed.item.text) {
+              yield parsed.item.text;
+            }
+          }
+
+          // Log errors but continue streaming
+          if (parsed.type === "error") {
+            logger.error({ error: parsed }, "Codex CLI error event");
+          }
+        } catch (parseError) {
+          // Skip non-JSON lines (ERROR logs, etc.)
+          logger.debug({ line, parseError }, "Skipping non-JSON line");
+          continue;
+        }
+      }
+
+      logger.info({ model }, "Codex CLI streaming completed");
+    } catch (error) {
+      logger.error({ error, model }, "Codex CLI streaming failed");
+      throw new Error(`Codex CLI streaming failed: ${error}`);
+    }
+  }
+
+  /**
+   * Execute codex CLI command and parse JSON output (non-streaming)
    */
   async execute(options: CodexCLIExecutionOptions): Promise<CodexCLIResponse> {
     const {
       prompt,
       model = this.defaultModel,
+      reasoningEffort,
+      images,
       timeoutMs = this.defaultTimeoutMs,
       workingDir,
     } = options;
 
-    logger.info({ model, promptLength: prompt.length }, "Executing codex CLI command");
+    logger.info({
+      model,
+      reasoningEffort,
+      promptLength: prompt.length,
+      imageCount: images?.length || 0
+    }, "Executing codex CLI command");
 
     try {
-      // Build command with experimental JSON output
-      const args = ["exec", prompt, "--experimental-json"];
+      // Build command with config overrides and experimental JSON output
+      const args: string[] = [];
 
-      // Only add model if not default (to avoid unsupported model errors)
-      if (model && model !== this.defaultModel) {
-        args.push("-m", model);
+      // Disable MCP servers to speed up execution and reduce noise
+      args.push("-c", "mcp_servers={}");
+
+      // Add model config override
+      if (model) {
+        args.push("-c", `model="${model}"`);
       }
 
+      // Add reasoning effort config override
+      if (reasoningEffort) {
+        args.push("-c", `model_reasoning_effort="${reasoningEffort}"`);
+      }
+
+      // Add images
+      if (images && images.length > 0) {
+        for (const imagePath of images) {
+          args.push("-i", imagePath);
+        }
+      }
+
+      // Add working directory
       if (workingDir) {
         args.push("-C", workingDir);
       }
+
+      // Add exec command with prompt and JSON output
+      args.push("exec", prompt, "--experimental-json");
 
       // Execute with timeout
       const command = $`codex ${args}`.quiet();
