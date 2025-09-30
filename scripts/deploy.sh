@@ -113,11 +113,19 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
-# Step 4: Create remote directory structure
+# Step 4: Stop PM2 process (to unlock binary file)
+echo -e "${YELLOW}→ Stopping PM2 process...${NC}"
+ssh "$SSH_HOST" bash -l << 'EOF'
+  if command -v bunx &> /dev/null; then
+    bunx pm2 stop bun-gemini-proxy 2>/dev/null || true
+  fi
+EOF
+
+# Step 5: Create remote directory structure
 echo -e "${YELLOW}→ Preparing remote server...${NC}"
 ssh "$SSH_HOST" "mkdir -p $REMOTE_PATH/logs && mkdir -p $REMOTE_PATH/bin"
 
-# Step 5: Copy files to remote server
+# Step 6: Copy files to remote server
 echo -e "${YELLOW}→ Copying files to server...${NC}"
 
 # Copy binary
@@ -130,21 +138,21 @@ scp "./ecosystem.config.js" "$SSH_HOST:$REMOTE_PATH/"
 
 echo -e "${GREEN}✓ Files copied successfully${NC}"
 
-# Step 6: Set executable permissions
+# Step 7: Set executable permissions
 echo -e "${YELLOW}→ Setting permissions...${NC}"
 ssh "$SSH_HOST" "chmod +x $REMOTE_PATH/bin/$BINARY_NAME"
 
-# Step 7: Restart PM2 process
+# Step 8: Start PM2 process
 echo ""
 echo -e "${YELLOW}→ Restarting PM2 process...${NC}"
 
 ssh "$SSH_HOST" bash -l << 'EOF'
   cd /home/ec2-user/bun-gemini-proxy
 
-  # Check if process exists
+  # Start or restart PM2 process
   if bunx pm2 describe bun-gemini-proxy > /dev/null 2>&1; then
-    echo "Reloading existing PM2 process..."
-    bunx pm2 reload ecosystem.config.js
+    echo "Restarting existing PM2 process..."
+    bunx pm2 restart bun-gemini-proxy
   else
     echo "Starting new PM2 process..."
     bunx pm2 start ecosystem.config.js
