@@ -1,0 +1,87 @@
+{
+  "keys": [
+    {
+      "id": "firepaperbird",
+      "key": "AIzaSyC7F_D0shznQpOxMkIVj7v5n4T8Sh5WfUY",
+      "name": "firepaperbird",
+      "weight": 1,
+      "isActive": true,
+      "createdAt": "2025-09-29T17:59:48.533Z",
+      "lastUsedAt": "2025-09-29T18:29:09.846Z",
+      "cooldownSeconds": 30
+    },
+    {
+      "id": "thanvaquy1996",
+      "key": "AIzaSyAO8jWt0TZWRHvhqFwcIytZyuXXkPecMYE",
+      "name": "thanvaquy1996",
+      "weight": 1,
+      "isActive": true,
+      "createdAt": "2025-09-29T17:59:48.534Z",
+      "lastUsedAt": null,
+      "cooldownSeconds": 30
+    },
+    {
+      "id": "quan.le.se62293",
+      "key": "AIzaSyDP361_dv8JXkXsQ9MGHJBBAzF9prYTjgI",
+      "name": "quan.le.se62293",
+      "weight": 1,
+      "isActive": true,
+      "createdAt": "2025-09-29T17:59:48.534Z",
+      "lastUsedAt": null,
+      "cooldownSeconds": 30
+    }
+  ],
+  "health": [
+    {
+      "keyId": "firepaperbird",
+      "score": 1,
+      "successCount": 1,
+      "failureCount": 0,
+      "windowStartTime": "2025-09-29T18:29:09.846Z",
+      "lastUpdated": "2025-09-29T18:29:09.846Z"
+    },
+    {
+      "keyId": "thanvaquy1996",
+      "score": 0,
+      "successCount": 0,
+      "failureCount": 1,
+      "windowStartTime": "2025-09-29T18:09:27.431Z",
+      "lastUpdated": "2025-09-29T18:09:27.431Z"
+    },
+    {
+      "keyId": "quan.le.se62293",
+      "score": 1,
+      "successCount": 0,
+      "failureCount": 0,
+      "windowStartTime": "2025-09-29T17:59:48.534Z",
+      "lastUpdated": "2025-09-29T17:59:48.534Z"
+    }
+  ],
+  "circuits": [
+    {
+      "keyId": "firepaperbird",
+      "state": "CLOSED",
+      "failureCount": 0,
+      "lastFailureTime": null,
+      "nextAttemptTime": null,
+      "openedAt": null
+    },
+    {
+      "keyId": "thanvaquy1996",
+      "state": "CLOSED",
+      "failureCount": 1,
+      "lastFailureTime": "2025-09-29T18:09:27.431Z",
+      "nextAttemptTime": null,
+      "openedAt": null
+    },
+    {
+      "keyId": "quan.le.se62293",
+      "state": "CLOSED",
+      "failureCount": 0,
+      "lastFailureTime": null,
+      "nextAttemptTime": null,
+      "openedAt": null
+    }
+  ],
+  "metrics": []
+}

@@ -1,0 +1,4 @@
+$ bun run index.ts
+{"level":30,"time":1759203362855,"host":"0.0.0.0","port":8000,"msg":"Gemini proxy server started"}
+{"level":40,"time":1759203376044,"keyId":"thanvaquy1996","status":404,"msg":"Upstream failure; rotating to next key"}
+{"level":40,"time":1759203376197,"keyId":"firepaperbird","status":404,"msg":"Upstream failure; rotating to next key"}

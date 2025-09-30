@@ -34,7 +34,7 @@ describe("Proxy API performance: /v1/chat/completions", () => {
         } else {
           failed++;
         }
-      } catch (_error) {
+      } catch {
         failed++;
       } finally {
         completed++;

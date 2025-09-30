@@ -1,6 +1,6 @@
 import { describe, it, expect, mock } from "bun:test";
 import { ResilientStateStore } from "../../src/persistence/resilient-store.ts";
-import type { StateStore, PersistedState } from "../../src/persistence/state-store.ts";
+import type { StateStore } from "../../src/persistence/state-store.ts";
 
 const createMockStore = (name: string): StateStore => ({
   init: mock(() => console.log(`${name} init`)),
@@ -8,7 +8,7 @@ const createMockStore = (name: string): StateStore => ({
     console.log(`${name} load`);
     return { keys: [], health: [], circuits: [], metrics: [] };
   }),
-  save: mock((_: PersistedState) => console.log(`${name} save`)),
+  save: mock(() => console.log(`${name} save`)),
   upsertKey: mock(() => console.log(`${name} upsertKey`)),
   recordRequestMetrics: mock(() => console.log(`${name} recordRequestMetrics`)),
 });
