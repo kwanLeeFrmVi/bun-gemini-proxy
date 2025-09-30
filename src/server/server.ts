@@ -109,7 +109,7 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
         return await proxyRouter.handle(request);
       }
 
-      if (url.pathname === "/healthz") {
+      if (url.pathname === "/health" || url.pathname === "/healthz") {
         const keys = keyManager.listKeys();
         const unhealthy = keys.filter((key) => key.status !== "active").length;
         const status = unhealthy === 0 ? "ok" : "degraded";
@@ -148,6 +148,7 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
 │  📖 Open user guide: http://${server.hostname}:${server.port}/help                │
 │  🔧 Admin panel:     http://${server.hostname}:${server.port}/admin/health         │
 │  ⚡ API endpoint:     http://${server.hostname}:${server.port}/v1                  │
+│  ❤️  Health check:    http://${server.hostname}:${server.port}/health              │
 │                                                                 │
 │  Press Ctrl+C to stop the server                               │
 │                                                                 │

@@ -116,11 +116,11 @@ For development or customization:
 3. **Configure API keys**
 
    ```bash
-   cp keys.example.yaml config/keys.yaml
-   cp proxy.example.yaml config/proxy.yaml
+   cp keys.example.yaml keys.yaml
+   cp proxy.example.yaml proxy.yaml
    ```
 
-   Edit `config/keys.yaml`:
+   Edit `keys.yaml`:
    ```yaml
    keys:
      - name: "primary-key"
@@ -135,7 +135,7 @@ For development or customization:
 
 4. **Configure proxy settings** (optional)
 
-   Edit `config/proxy.yaml`:
+   Edit `proxy.yaml`:
    ```yaml
    proxy:
      host: "0.0.0.0"
@@ -155,7 +155,7 @@ For development or customization:
 6. **Verify installation**
    ```bash
    # Check health
-   curl http://localhost:8000/healthz
+   curl http://localhost:8000/health
 
    # List models
    curl http://localhost:8000/v1/models
@@ -284,7 +284,7 @@ curl http://localhost:8000/codex-cli/v1/chat/completions \
   -d '{"model":"claude-sonnet-4","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-**Admin Endpoints**: Require admin token (configured in `config/proxy.yaml`)
+**Admin Endpoints**: Require admin token (configured in `proxy.yaml`)
 
 ```bash
 curl http://localhost:8000/admin/health \
@@ -293,7 +293,7 @@ curl http://localhost:8000/admin/health \
 
 ### Configure Authentication
 
-Edit `config/proxy.yaml`:
+Edit `proxy.yaml`:
 
 ```yaml
 proxy:
@@ -511,7 +511,7 @@ Response:
 
 ## Admin Endpoints
 
-Admin endpoints require authentication via `adminToken` configured in `config/proxy.yaml`.
+Admin endpoints require authentication via `adminToken` configured in `proxy.yaml`.
 
 **Authorization Header**: `Authorization: Bearer YOUR_ADMIN_TOKEN`
 
@@ -905,7 +905,7 @@ client.chat(
 
 ## Configuration Reference
 
-### Proxy Configuration (`config/proxy.yaml`)
+### Proxy Configuration (`proxy.yaml`)
 
 ```yaml
 proxy:
@@ -936,7 +936,7 @@ proxy:
 - `accessTokens: [...]` + `requireAuth: true` → Authentication required
 - `accessTokens: [...]` + `requireAuth: false` → Authentication optional
 
-### API Keys Configuration (`config/keys.yaml`)
+### API Keys Configuration (`keys.yaml`)
 
 ```yaml
 keys:
@@ -960,7 +960,7 @@ keys:
 
 **Cooldown**: Time in seconds before a failed key is retried.
 
-### Monitoring Configuration (`config/proxy.yaml`)
+### Monitoring Configuration (`proxy.yaml`)
 
 ```yaml
 monitoring:
@@ -970,7 +970,7 @@ monitoring:
   windowSeconds: 300              # 5-minute sliding window for health calc
 ```
 
-### Persistence Configuration (`config/proxy.yaml`)
+### Persistence Configuration (`proxy.yaml`)
 
 ```yaml
 persistence:
@@ -1229,7 +1229,7 @@ The proxy logs rate limit information from upstream responses. Monitor for:
 
 ### Circuit Breaker Tuning
 
-Adjust circuit breaker sensitivity in `config/proxy.yaml`:
+Adjust circuit breaker sensitivity in `proxy.yaml`:
 
 ```yaml
 monitoring:
@@ -1293,8 +1293,8 @@ Update configuration without downtime:
 
 ```bash
 # Edit config files
-vim config/keys.yaml
-vim config/proxy.yaml
+vim keys.yaml
+vim proxy.yaml
 
 # Reload via admin endpoint
 curl -X POST http://localhost:8000/admin/config/reload \
@@ -1490,7 +1490,7 @@ lsof -i :8000
 kill -9 <PID>
 
 # Or change port in config
-vim config/proxy.yaml  # Change port: 8000 to port: 8001
+vim proxy.yaml  # Change port: 8000 to port: 8001
 ```
 
 **Error: Cannot read config files**
@@ -1500,7 +1500,7 @@ vim config/proxy.yaml  # Change port: 8000 to port: 8001
 ls -la config/
 
 # Fix permissions
-chmod 644 config/*.yaml
+chmod 644 *.yaml
 ```
 
 **Error: SQLite database locked**
@@ -1554,7 +1554,7 @@ rm .runtime/state.sqlite-wal
 
 2. **Increase timeout**:
    ```yaml
-   # config/proxy.yaml
+   # proxy.yaml
    proxy:
      requestTimeoutMs: 30000  # Increase from 10000
    ```
@@ -1658,7 +1658,7 @@ Sample `request.json`:
 ### Optimal Configuration for High Throughput
 
 ```yaml
-# config/proxy.yaml
+# proxy.yaml
 proxy:
   requestTimeoutMs: 15000        # 15s timeout
   maxPayloadBytes: 5242880       # 5MB limit (reduce for faster)
@@ -1669,7 +1669,7 @@ monitoring:
   recoveryTimeSeconds: 60         # Quick recovery
   windowSeconds: 60               # Short window for fast adaptation
 
-# config/keys.yaml
+# keys.yaml
 keys:
   # 5+ keys with equal weights for best distribution
   - name: "key-1"
@@ -1687,7 +1687,7 @@ keys:
 ### Optimal Configuration for Reliability
 
 ```yaml
-# config/proxy.yaml
+# proxy.yaml
 proxy:
   requestTimeoutMs: 30000        # 30s timeout (tolerate slow responses)
 
@@ -1848,7 +1848,7 @@ cat server.log | jq -r '.endpoint' | sort | uniq -c
 1. **Check Logs**: Review structured logs for error details
 2. **Admin Endpoints**: Use `/admin/health` and `/admin/keys` for diagnostics
 3. **Health Checks**: Verify CLI backends with `/gemini-cli/v1/health` and `/codex-cli/v1/health`
-4. **Configuration**: Review `config/*.yaml` for misconfigurations
+4. **Configuration**: Review `*.yaml` for misconfigurations
 5. **GitHub Issues**: Search existing issues or create new one
 
 ### Common Resources

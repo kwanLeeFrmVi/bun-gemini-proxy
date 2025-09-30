@@ -34,8 +34,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .DS_Store
 
 # secret keys and runtime config
-config/keys.yaml
-config/proxy.yaml
 keys.yaml
 proxy.yaml
 .runtime/

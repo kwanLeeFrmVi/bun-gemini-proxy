@@ -40,10 +40,10 @@ When the server starts, you'll see:
 bun install
 
 # Copy example configs
-cp proxy.example.yaml config/proxy.yaml
-cp keys.example.yaml config/keys.yaml
+cp proxy.example.yaml proxy.yaml
+cp keys.example.yaml keys.yaml
 
-# Edit config/keys.yaml with your API keys
+# Edit keys.yaml with your API keys
 
 # Run locally
 bun run start
@@ -56,11 +56,12 @@ open http://localhost:8000/help
 
 ### Config Priority
 
-The proxy searches for config files in this order:
-1. CLI options (if provided via code)
-2. Environment variables (`PROXY_CONFIG_PATH`, `KEYS_CONFIG_PATH`)
-3. Current working directory (`./proxy.yaml`, `./keys.yaml`)
-4. Local config directory (`./config/proxy.yaml`, `./config/keys.yaml`)
+The proxy searches for config files in your **current working directory**:
+
+1. Environment variables (`PROXY_CONFIG_PATH`, `KEYS_CONFIG_PATH`)
+2. **Current working directory** (`./proxy.yaml`, `./keys.yaml`)
+
+**Note**: Config files (`keys.yaml`, `proxy.yaml`) are gitignored to prevent committing secrets. Only example files (`*.example.yaml`) are tracked in git.
 
 ### Example Config Files
 
