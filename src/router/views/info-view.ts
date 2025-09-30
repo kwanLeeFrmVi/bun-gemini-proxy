@@ -1,6 +1,7 @@
 import type { ProxyConfig } from "../../types/config.ts";
 import type { StateStore } from "../../persistence/state-store.ts";
 import type { KeyManager } from "../../keys/key-manager.ts";
+import type { KeyStatusSummary } from "../../types/key.ts";
 import { logger } from "../../observability/logger.ts";
 import { errorResponse } from "../responses.ts";
 
@@ -8,6 +9,34 @@ export interface InfoViewOptions {
   config: ProxyConfig;
   keyManager: KeyManager;
   stateStore: StateStore;
+}
+
+interface UsageSummary {
+  dailyRequests: number;
+  weeklyRequests: number;
+  dailyErrors: number;
+  successRate: number;
+  keysWithDailyUsage: number;
+}
+
+interface InfoPageKeyRow {
+  id: string;
+  name: string;
+  status: KeyStatusSummary["status"];
+  failureCount: number;
+  lastUsed: Date | null;
+  dailyRequests: number;
+  weeklyRequests: number;
+  requestsPerHour: number;
+  successRate: number;
+  avgLatencyMs: number | null;
+}
+
+interface InfoPageViewModel {
+  baseUrl: string;
+  totalKeys: number;
+  usageSummary: UsageSummary;
+  keyRows: InfoPageKeyRow[];
 }
 
 /**
@@ -18,6 +47,32 @@ export class InfoView {
   private readonly config: ProxyConfig;
   private readonly keyManager: KeyManager;
   private readonly stateStore: StateStore;
+  private readonly integerFormatter = new Intl.NumberFormat("en-US");
+  private readonly decimalFormatter = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  private readonly percentFormatter = new Intl.NumberFormat("en-US", {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  private readonly dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  private readonly statusLabels: Record<KeyStatusSummary["status"], string> = {
+    active: "Active",
+    disabled: "Disabled",
+    circuit_open: "Circuit Open",
+    circuit_half_open: "Circuit Half-Open",
+  };
+  private readonly statusClasses: Record<KeyStatusSummary["status"], string> = {
+    active: "status-active",
+    disabled: "status-disabled",
+    circuit_open: "status-circuit_open",
+    circuit_half_open: "status-circuit_half_open",
+  };
 
   constructor(options: InfoViewOptions) {
     this.config = options.config;
@@ -30,41 +85,75 @@ export class InfoView {
    */
   async render(): Promise<Response> {
     try {
-      const keys = this.keyManager.listKeys();
-      const dailyStats = this.stateStore.getDailyUsageStats();
-      const weeklyStats = this.stateStore.getWeeklyUsageStats();
+      const model = this.buildViewModel();
+      const html = this.renderHtml(model);
 
-      // Create map for quick lookup
-      const dailyMap = new Map(dailyStats.map((s) => [s.keyId, s]));
-      const weeklyMap = new Map(weeklyStats.map((s) => [s.keyId, s]));
+      return new Response(html, {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    } catch (error) {
+      logger.error(
+        {
+          error,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        "Failed to load info page",
+      );
+      return errorResponse("Info page not available", 500, "internal_error");
+    }
+  }
 
-      const keyRows = keys
-        .map((key) => {
-          const daily = dailyMap.get(key.id);
-          const weekly = weeklyMap.get(key.id);
-          const requestsPerHour = daily ? (daily.totalRequests / 24).toFixed(1) : "0.0";
+  private buildViewModel(): InfoPageViewModel {
+    const keys = this.keyManager.listKeys();
+    const dailyStats = this.stateStore.getDailyUsageStats();
+    const weeklyStats = this.stateStore.getWeeklyUsageStats();
 
-          return `
-        <tr>
-          <td><strong>${key.name}</strong></td>
-          <td><span class="status-badge status-${key.status}">${key.status.replace("_", " ")}</span></td>
-          <td>${daily ? daily.totalRequests.toLocaleString() : "0"} / ${weekly ? weekly.totalRequests.toLocaleString() : "0"}</td>
-          <td>${key.failureCount}</td>
-          <td>${key.lastUsed ? new Date(key.lastUsed).toLocaleString() : "Never"}</td>
-          <td>${requestsPerHour} req/h</td>
-          <td>${daily ? (daily.successRate * 100).toFixed(1) : "0.0"}%</td>
-        </tr>`;
-        })
-        .join("");
+    const dailyMap = new Map(dailyStats.map((stat) => [stat.keyId, stat]));
+    const weeklyMap = new Map(weeklyStats.map((stat) => [stat.keyId, stat]));
 
-      const totalDailyRequests = dailyStats.reduce((sum, s) => sum + s.totalRequests, 0);
-      const totalWeeklyRequests = weeklyStats.reduce((sum, s) => sum + s.totalRequests, 0);
-      const totalDailySuccess = dailyStats.reduce((sum, s) => sum + s.successCount, 0);
-      const totalDailyErrors = dailyStats.reduce((sum, s) => sum + s.errorCount, 0);
-      const overallSuccessRate =
-        totalDailyRequests > 0 ? ((totalDailySuccess / totalDailyRequests) * 100).toFixed(1) : "0.0";
+    const keyRows: InfoPageKeyRow[] = keys
+      .map((key) => {
+        const daily = dailyMap.get(key.id);
+        const weekly = weeklyMap.get(key.id);
 
-      const html = `<!DOCTYPE html>
+        return {
+          id: key.id,
+          name: key.name,
+          status: key.status,
+          failureCount: key.failureCount,
+          lastUsed: key.lastUsed,
+          dailyRequests: daily?.totalRequests ?? 0,
+          weeklyRequests: weekly?.totalRequests ?? 0,
+          requestsPerHour: daily ? daily.totalRequests / 24 : 0,
+          successRate: daily?.successRate ?? 0,
+          avgLatencyMs: daily ? daily.avgLatencyMs : null,
+        } satisfies InfoPageKeyRow;
+      })
+      .sort((a, b) => b.dailyRequests - a.dailyRequests || a.name.localeCompare(b.name));
+
+    const totalDailyRequests = dailyStats.reduce((sum, stat) => sum + stat.totalRequests, 0);
+    const totalWeeklyRequests = weeklyStats.reduce((sum, stat) => sum + stat.totalRequests, 0);
+    const totalDailySuccess = dailyStats.reduce((sum, stat) => sum + stat.successCount, 0);
+    const totalDailyErrors = dailyStats.reduce((sum, stat) => sum + stat.errorCount, 0);
+    const keysWithDailyUsage = keyRows.filter((row) => row.dailyRequests > 0).length;
+
+    return {
+      baseUrl: this.config.upstreamBaseUrl,
+      totalKeys: keys.length,
+      usageSummary: {
+        dailyRequests: totalDailyRequests,
+        weeklyRequests: totalWeeklyRequests,
+        dailyErrors: totalDailyErrors,
+        successRate: totalDailyRequests > 0 ? totalDailySuccess / totalDailyRequests : 0,
+        keysWithDailyUsage,
+      },
+      keyRows,
+    } satisfies InfoPageViewModel;
+  }
+
+  private renderHtml(model: InfoPageViewModel): string {
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -73,7 +162,7 @@ export class InfoView {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", sans-serif;
       line-height: 1.6;
       color: #333;
       background: #f5f5f5;
@@ -119,10 +208,14 @@ export class InfoView {
       letter-spacing: 0.5px;
       margin-bottom: 10px;
     }
-    .info-card .value {
+    .value {
       font-size: 2em;
       font-weight: bold;
       color: #1e293b;
+    }
+    .value--small {
+      font-size: 1.2em;
+      word-break: break-all;
     }
     table {
       width: 100%;
@@ -179,13 +272,15 @@ export class InfoView {
       background: #1e40af;
       text-decoration: none;
     }
-    code {
-      background: #f1f5f9;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-family: 'Monaco', 'Courier New', monospace;
+    .table-note {
+      margin-top: 30px;
+      color: #64748b;
       font-size: 0.9em;
-      color: #dc2626;
+    }
+    .empty-state {
+      text-align: center;
+      color: #64748b;
+      font-style: italic;
     }
   </style>
 </head>
@@ -193,44 +288,56 @@ export class InfoView {
   <div class="container">
     <a href="/" class="back-link">← Back to API</a>
     <h1>🔧 Gemini Proxy Server Info</h1>
+    ${this.renderOverviewSection(model)}
+    ${this.renderUsageSection(model.usageSummary)}
+    ${this.renderKeyTable(model.keyRows)}
+  </div>
+</body>
+</html>`;
+  }
 
-    <h2>📊 Server Configuration</h2>
+  private renderOverviewSection(model: InfoPageViewModel): string {
+    return `<h2>📊 Server Configuration</h2>
     <div class="info-grid">
       <div class="info-card">
         <h3>Base URL</h3>
-        <div class="value" style="font-size: 1.2em; word-break: break-all;">${this.config.upstreamBaseUrl}</div>
-      </div>
-      <div class="info-card">
-        <h3>Mode</h3>
-        <div class="value">${this.config.mode}</div>
+        <div class="value value--small">${this.escapeHtml(model.baseUrl)}</div>
       </div>
       <div class="info-card">
         <h3>Total Keys</h3>
-        <div class="value">${keys.length}</div>
+        <div class="value">${this.formatInteger(model.totalKeys)}</div>
       </div>
-    </div>
+      <div class="info-card">
+        <h3>Keys With Traffic (24h)</h3>
+        <div class="value">${this.formatInteger(model.usageSummary.keysWithDailyUsage)}</div>
+      </div>
+    </div>`;
+  }
 
-    <h2>📈 Usage Summary</h2>
+  private renderUsageSection(summary: UsageSummary): string {
+    return `<h2>📈 Usage Summary</h2>
     <div class="info-grid">
       <div class="info-card">
         <h3>Daily Requests</h3>
-        <div class="value">${totalDailyRequests.toLocaleString()}</div>
+        <div class="value">${this.formatInteger(summary.dailyRequests)}</div>
       </div>
       <div class="info-card">
         <h3>Weekly Requests</h3>
-        <div class="value">${totalWeeklyRequests.toLocaleString()}</div>
+        <div class="value">${this.formatInteger(summary.weeklyRequests)}</div>
       </div>
       <div class="info-card">
         <h3>Success Rate (24h)</h3>
-        <div class="value">${overallSuccessRate}%</div>
+        <div class="value">${this.formatPercent(summary.successRate)}</div>
       </div>
       <div class="info-card">
         <h3>Errors (24h)</h3>
-        <div class="value">${totalDailyErrors.toLocaleString()}</div>
+        <div class="value">${this.formatInteger(summary.dailyErrors)}</div>
       </div>
-    </div>
+    </div>`;
+  }
 
-    <h2>🔑 API Key Status</h2>
+  private renderKeyTable(keyRows: InfoPageKeyRow[]): string {
+    return `<h2>🔑 API Key Status</h2>
     <table>
       <thead>
         <tr>
@@ -241,27 +348,90 @@ export class InfoView {
           <th>Last Used</th>
           <th>Requests/Hour</th>
           <th>Success Rate</th>
+          <th>Avg Latency (24h)</th>
         </tr>
       </thead>
       <tbody>
-        ${keyRows}
+        ${this.renderKeyRows(keyRows)}
       </tbody>
     </table>
+    <p class="table-note"><strong>Note:</strong> Usage statistics are calculated from recorded metrics. Requests/hour and latency are based on the last 24 hours of activity.</p>`;
+  }
 
-    <p style="margin-top: 30px; color: #64748b; font-size: 0.9em;">
-      <strong>Note:</strong> Usage statistics are calculated from recorded metrics.
-      Requests/hour is based on the last 24 hours of activity.
-    </p>
-  </div>
-</body>
-</html>`;
-
-      return new Response(html, {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
-    } catch (error) {
-      logger.error({ error, message: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined }, "Failed to load info page");
-      return errorResponse("Info page not available", 500, "internal_error");
+  private renderKeyRows(keyRows: InfoPageKeyRow[]): string {
+    if (keyRows.length === 0) {
+      return `<tr>
+          <td class="empty-state" colspan="8">No API keys configured yet.</td>
+        </tr>`;
     }
+
+    return keyRows
+      .map(
+        (row) => `<tr>
+          <td><strong>${this.escapeHtml(row.name)}</strong></td>
+          <td><span class="status-badge ${this.statusClasses[row.status]}">${this.escapeHtml(this.formatStatus(row.status))}</span></td>
+          <td>${this.formatInteger(row.dailyRequests)} / ${this.formatInteger(row.weeklyRequests)}</td>
+          <td>${this.formatInteger(row.failureCount)}</td>
+          <td>${this.formatDateTime(row.lastUsed)}</td>
+          <td>${this.formatDecimal(row.requestsPerHour)} req/h</td>
+          <td>${this.formatPercent(row.successRate)}</td>
+          <td>${this.formatLatency(row.avgLatencyMs)}</td>
+        </tr>`,
+      )
+      .join("");
+  }
+
+  private formatInteger(value: number): string {
+    return this.integerFormatter.format(Math.round(value));
+  }
+
+  private formatDecimal(value: number): string {
+    return this.decimalFormatter.format(Number.isFinite(value) ? value : 0);
+  }
+
+  private formatPercent(value: number): string {
+    const clamped = Number.isFinite(value) ? Math.min(Math.max(value, 0), 1) : 0;
+    return this.percentFormatter.format(clamped);
+  }
+
+  private formatLatency(value: number | null): string {
+    if (value === null) {
+      return "—";
+    }
+    return `${this.formatDecimal(value)} ms`;
+  }
+
+  private formatDateTime(value: Date | null): string {
+    if (!value) {
+      return "Never";
+    }
+    try {
+      return this.dateTimeFormatter.format(value);
+    } catch {
+      return value.toISOString();
+    }
+  }
+
+  private formatStatus(status: KeyStatusSummary["status"]): string {
+    return this.statusLabels[status] ?? status;
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (char) => {
+      switch (char) {
+        case "&":
+          return "&amp;";
+        case "<":
+          return "&lt;";
+        case ">":
+          return "&gt;";
+        case "\"":
+          return "&quot;";
+        case "'":
+          return "&#39;";
+        default:
+          return char;
+      }
+    });
   }
 }
