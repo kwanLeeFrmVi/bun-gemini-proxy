@@ -1,6 +1,6 @@
 {
   "name": "bun-gemini-proxy",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Gemini API Proxy Server with OpenAI-compatible endpoints",
   "module": "index.ts",
   "type": "module",
@@ -13,7 +13,11 @@
     "lint": "bunx eslint .",
     "lint:fix": "bunx eslint . --fix",
     "format": "bunx prettier --check .",
-    "format:fix": "bunx prettier --write ."
+    "format:fix": "bunx prettier --write .",
+    "build:macos": "scripts/build_macos.sh",
+    "build:linux": "scripts/build_linux.sh",
+    "build": "bun run build:macos && bun run build:linux",
+    "deploy": "scripts/deploy.sh"
   },
   "devDependencies": {
     "@types/bun": "latest",
