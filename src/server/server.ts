@@ -8,10 +8,7 @@ import { ProxyRouter } from "../router/proxy-router.ts";
 import { AdminRouter } from "../router/admin-router.ts";
 import { GeminiCLIRouter } from "../router/cli/gemini-cli-router.ts";
 import { CodexCLIRouter } from "../router/cli/codex-cli-router.ts";
-import {
-  JsonStateStore,
-  SQLiteStateStore,
-} from "../persistence/state-store.ts";
+import { JsonStateStore, SQLiteStateStore } from "../persistence/state-store.ts";
 import { ResilientStateStore } from "../persistence/resilient-store.ts";
 import { errorResponse } from "../router/responses.ts";
 
@@ -47,7 +44,12 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
   keyManager.bootstrap(resolvedConfig.keys, persisted);
 
   const geminiClient = new GeminiClient(proxyConfig);
-  const proxyRouter = new ProxyRouter({ config: proxyConfig, keyManager, gemini: geminiClient, stateStore });
+  const proxyRouter = new ProxyRouter({
+    config: proxyConfig,
+    keyManager,
+    gemini: geminiClient,
+    stateStore,
+  });
   const cliRouter = new GeminiCLIRouter({ config: proxyConfig });
   const codexRouter = new CodexCLIRouter({ config: proxyConfig });
   const adminRouter = new AdminRouter({
@@ -143,14 +145,14 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
     console.log(`
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│  🚀 Gemini Proxy Server is running!                            │
+│  🚀 Gemini Proxy Server is running!                             │
 │                                                                 │
-│  📖 Open user guide: http://${server.hostname}:${server.port}/help                │
-│  🔧 Admin panel:     http://${server.hostname}:${server.port}/admin/health         │
-│  ⚡ API endpoint:     http://${server.hostname}:${server.port}/v1                  │
-│  ❤️  Health check:    http://${server.hostname}:${server.port}/health              │
+│  📖 Open user guide: http://${server.hostname}:${server.port}/help                   │
+│  🔧 Admin panel:     http://${server.hostname}:${server.port}/admin/health           │
+│  ⚡ API endpoint:     http://${server.hostname}:${server.port}/v1                    │
+│  ❤️  Health check:    http://${server.hostname}:${server.port}/health                 │
 │                                                                 │
-│  Press Ctrl+C to stop the server                               │
+│  Press Ctrl+C to stop the server                                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 `);
