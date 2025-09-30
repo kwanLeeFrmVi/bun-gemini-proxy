@@ -49,18 +49,16 @@ export class ConfigManager {
   private currentConfig: ResolvedConfig;
 
   constructor(options: ConfigManagerOptions = {}) {
-    // Priority: CLI option > ENV var > CWD > config/ directory
+    // Priority: CLI option > ENV var > CWD (current working directory)
     this.proxyPath = this.resolveConfigPath(
       options.proxyPath,
       process.env.PROXY_CONFIG_PATH,
-      "proxy.yaml",
-      "config/proxy.yaml"
+      "proxy.yaml"
     );
     this.keysPath = this.resolveConfigPath(
       options.keysPath,
       process.env.KEYS_CONFIG_PATH,
-      "keys.yaml",
-      "config/keys.yaml"
+      "keys.yaml"
     );
 
     logger.info({ proxyPath: this.proxyPath, keysPath: this.keysPath }, "Config paths resolved");
@@ -72,8 +70,7 @@ export class ConfigManager {
   private resolveConfigPath(
     cliOption: string | undefined,
     envVar: string | undefined,
-    cwdFile: string,
-    defaultPath: string
+    filename: string
   ): string {
     if (cliOption) {
       return resolve(cliOption);
@@ -81,11 +78,8 @@ export class ConfigManager {
     if (envVar) {
       return resolve(envVar);
     }
-    const cwdPath = resolve(process.cwd(), cwdFile);
-    if (existsSync(cwdPath)) {
-      return cwdPath;
-    }
-    return resolve(defaultPath);
+    // Always use CWD - works for both bunx and local dev
+    return resolve(process.cwd(), filename);
   }
 
   getConfig(): ResolvedConfig {

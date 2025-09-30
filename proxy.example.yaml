@@ -1,18 +1,32 @@
+# Gemini Proxy Server Configuration
+# Copy this file to `proxy.yaml` and customize as needed.
+
 proxy:
-  host: "0.0.0.0"
-  port: 8000
-  adminToken: "test-admin-token"
-  requestTimeoutMs: 10000
-  upstreamBaseUrl: "https://generativelanguage.googleapis.com"
-  accessTokens: []
-  requireAuth: false
+  # Server binding
+  host: "0.0.0.0"  # Bind to all interfaces (use "127.0.0.1" for localhost only)
+  port: 8000       # HTTP port for the proxy server
 
+  # Admin authentication (CHANGE THIS IN PRODUCTION!)
+  adminToken: "test-admin-token"  # Token for /admin/* endpoints
+
+  # Request settings
+  requestTimeoutMs: 10000  # Timeout for upstream Gemini API requests (10 seconds)
+
+  # Upstream API
+  upstreamBaseUrl: "https://generativelanguage.googleapis.com"  # Gemini API base URL
+
+  # Client authentication (optional)
+  accessTokens: []    # List of tokens clients must provide (empty = no auth required)
+  requireAuth: false  # Set to true to enforce client authentication
+
+# Key health monitoring and circuit breaker settings
 monitoring:
-  healthCheckIntervalSeconds: 30
-  failureThreshold: 3
-  recoveryTimeSeconds: 300
-  windowSeconds: 300
+  healthCheckIntervalSeconds: 30  # How often to check key health
+  failureThreshold: 3             # Consecutive failures before disabling a key
+  recoveryTimeSeconds: 300        # How long to wait before retrying a disabled key (5 minutes)
+  windowSeconds: 300              # Time window for tracking key health (5 minutes)
 
+# State persistence for key health across restarts
 persistence:
-  sqlitePath: ".runtime/state.sqlite"
-  fallbackJsonPath: ".runtime/state.json"
+  sqlitePath: ".runtime/state.sqlite"      # SQLite database for persistent state
+  fallbackJsonPath: ".runtime/state.json"  # JSON fallback if SQLite fails
