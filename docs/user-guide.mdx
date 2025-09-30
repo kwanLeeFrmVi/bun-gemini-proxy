@@ -55,12 +55,52 @@ The Gemini Proxy Server is a **Bun-based TypeScript proxy** that provides:
 ### Prerequisites
 
 - **[Bun](https://bun.sh/)** v1.0.0+ (JavaScript runtime)
-- **[Git](https://git-scm.com/)** (for cloning repository)
 - **Gemini API Key** from [Google AI Studio](https://makersuite.google.com/app/apikey)
 - **Optional**: `gemini` CLI for Gemini CLI backend
 - **Optional**: `codex` CLI for Codex CLI backend
 
-### Installation Steps
+### Quick Start with bunx (Recommended)
+
+Run directly from GitHub without cloning:
+
+1. **Create a working directory**
+   ```bash
+   mkdir my-gemini-proxy && cd my-gemini-proxy
+   ```
+
+2. **Download config templates**
+   ```bash
+   curl -o proxy.yaml https://raw.githubusercontent.com/your-org/bun-gemini-proxy/main/proxy.example.yaml
+   curl -o keys.yaml https://raw.githubusercontent.com/your-org/bun-gemini-proxy/main/keys.example.yaml
+   ```
+
+3. **Edit keys.yaml with your API keys**
+   ```yaml
+   keys:
+     - name: "primary-key"
+       key: "YOUR_GEMINI_API_KEY_HERE"
+       weight: 1
+       cooldownSeconds: 30
+   ```
+
+4. **Run the proxy**
+   ```bash
+   bunx github:your-org/bun-gemini-proxy
+   ```
+
+5. **Open the user guide**
+
+   The server will display:
+   ```
+   🚀 Gemini Proxy Server is running!
+   📖 Open user guide: http://0.0.0.0:8000/help
+   ```
+
+   Open http://localhost:8000/help in your browser for full documentation.
+
+### Local Development Installation
+
+For development or customization:
 
 1. **Clone the repository**
    ```bash
@@ -74,6 +114,11 @@ The Gemini Proxy Server is a **Bun-based TypeScript proxy** that provides:
    ```
 
 3. **Configure API keys**
+
+   ```bash
+   cp keys.example.yaml config/keys.yaml
+   cp proxy.example.yaml config/proxy.yaml
+   ```
 
    Edit `config/keys.yaml`:
    ```yaml

@@ -1,0 +1,16 @@
+# This is an example file for configuring your API keys.
+# Copy this file to `keys.yaml` and replace the placeholder values with your actual Gemini API keys.
+#
+# You can obtain API keys from Google AI Studio:
+# https://aistudio.google.com/app/apikey
+
+keys:
+  - name: "personal-key-1"  # A friendly name for your key
+    key: "YOUR_GEMINI_API_KEY_HERE"  # The actual API key
+    weight: 1  # (Optional) A weight for distributing requests (higher means more requests)
+    cooldownSeconds: 30  # (Optional) Time in seconds to wait before retrying a failing key
+
+  # You can add multiple keys to distribute the load.
+  # - name: "personal-key-2"
+  #   key: "ANOTHER_GEMINI_API_KEY"
+  #   weight: 2

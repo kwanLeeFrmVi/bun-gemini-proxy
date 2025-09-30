@@ -33,6 +33,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# secret keys
+# secret keys and runtime config
 config/keys.yaml
-.runtime/state.sqlite
+config/proxy.yaml
+keys.yaml
+proxy.yaml
+.runtime/

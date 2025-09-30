@@ -1,8 +1,12 @@
 {
   "name": "bun-gemini-proxy",
+  "version": "1.0.0",
+  "description": "Gemini API Proxy Server with OpenAI-compatible endpoints",
   "module": "index.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "bun-gemini-proxy": "./index.ts"
+  },
   "scripts": {
     "start": "bun run index.ts",
     "test": "bun test",

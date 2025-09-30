@@ -49,10 +49,43 @@ export class ConfigManager {
   private currentConfig: ResolvedConfig;
 
   constructor(options: ConfigManagerOptions = {}) {
-    this.proxyPath = resolve(options.proxyPath ?? "config/proxy.yaml");
-    this.keysPath = resolve(options.keysPath ?? "config/keys.yaml");
+    // Priority: CLI option > ENV var > CWD > config/ directory
+    this.proxyPath = this.resolveConfigPath(
+      options.proxyPath,
+      process.env.PROXY_CONFIG_PATH,
+      "proxy.yaml",
+      "config/proxy.yaml"
+    );
+    this.keysPath = this.resolveConfigPath(
+      options.keysPath,
+      process.env.KEYS_CONFIG_PATH,
+      "keys.yaml",
+      "config/keys.yaml"
+    );
+
+    logger.info({ proxyPath: this.proxyPath, keysPath: this.keysPath }, "Config paths resolved");
+
     this.currentConfig = this.load();
     this.watchFiles();
+  }
+
+  private resolveConfigPath(
+    cliOption: string | undefined,
+    envVar: string | undefined,
+    cwdFile: string,
+    defaultPath: string
+  ): string {
+    if (cliOption) {
+      return resolve(cliOption);
+    }
+    if (envVar) {
+      return resolve(envVar);
+    }
+    const cwdPath = resolve(process.cwd(), cwdFile);
+    if (existsSync(cwdPath)) {
+      return cwdPath;
+    }
+    return resolve(defaultPath);
   }
 
   getConfig(): ResolvedConfig {
