@@ -19,7 +19,6 @@ const DEFAULT_PROXY_CONFIG: ProxyConfig = {
   adminToken: process.env.PROXY_ADMIN_TOKEN ?? "test-admin-token",
   requestTimeoutMs: 10_000,
   upstreamBaseUrl: process.env.GEMINI_UPSTREAM_BASE_URL ?? "https://generativelanguage.googleapis.com",
-  mode: process.env.GEMINI_PROXY_MODE === "live" ? "live" : "mock",
   accessTokens: [],
   requireAuth: false,
 };
@@ -111,7 +110,6 @@ export class ConfigManager {
       ...DEFAULT_PROXY_CONFIG,
       ...(proxyDoc.proxy ?? {}),
       adminToken: process.env.PROXY_ADMIN_TOKEN ?? proxyDoc.proxy?.adminToken ?? null,
-      mode: proxyDoc.proxy?.mode === "live" ? "live" : DEFAULT_PROXY_CONFIG.mode,
     } satisfies ProxyConfig;
 
     const monitoringConfig: MonitoringConfig = {
@@ -124,17 +122,7 @@ export class ConfigManager {
       ...(proxyDoc.persistence ?? {}),
     } satisfies PersistedStateConfig;
 
-    let keys = keysDoc;
-    if ((keys?.length ?? 0) === 0 && proxyConfig.mode === "mock") {
-      keys = [
-        {
-          name: "mock-key",
-          key: "mock-key",
-          weight: 1,
-          cooldownSeconds: 30,
-        },
-      ];
-    }
+    const keys = keysDoc;
 
     return {
       proxy: proxyConfig,

@@ -5,7 +5,6 @@ export interface ProxyConfig {
   adminToken: string | null;
   requestTimeoutMs: number;
   upstreamBaseUrl: string;
-  mode: "live" | "mock";
   accessTokens: string[];
   requireAuth: boolean;
 }
