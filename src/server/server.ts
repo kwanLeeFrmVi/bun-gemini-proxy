@@ -6,6 +6,7 @@ import { KeyManager } from "../keys/key-manager.ts";
 import { GeminiClient } from "../router/gemini-client.ts";
 import { ProxyRouter } from "../router/proxy-router.ts";
 import { AdminRouter } from "../router/admin-router.ts";
+import { GeminiCLIRouter } from "../router/cli/gemini-cli-router.ts";
 import {
   JsonStateStore,
   SQLiteStateStore,
@@ -46,6 +47,7 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
 
   const geminiClient = new GeminiClient(proxyConfig);
   const proxyRouter = new ProxyRouter({ config: proxyConfig, keyManager, gemini: geminiClient, stateStore });
+  const cliRouter = new GeminiCLIRouter({ config: proxyConfig });
   const adminRouter = new AdminRouter({
     adminToken: proxyConfig.adminToken,
     keyManager,
@@ -87,6 +89,10 @@ export function startProxyServer(overrides: ServerOptions = {}): ProxyServerCont
     try {
       if (url.pathname.startsWith("/admin")) {
         return await adminRouter.handle(request);
+      }
+
+      if (url.pathname.startsWith("/gemini-cli/v1")) {
+        return await cliRouter.handle(request);
       }
 
       if (url.pathname === "/help" || url.pathname === "/info") {
