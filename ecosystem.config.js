@@ -49,7 +49,7 @@ module.exports = {
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',
       merge_logs: true,
-      log_type: 'json',
+      log_type: 'raw', // Use raw to avoid double-wrapping pino's JSON output
 
       // Process control
       kill_timeout: 5000, // Time to wait for graceful shutdown before SIGKILL
