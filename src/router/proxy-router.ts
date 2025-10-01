@@ -7,6 +7,7 @@ import { errorResponse, jsonResponse } from "./responses.ts";
 import { logger } from "../observability/logger.ts";
 import { HelpView } from "./views/help-view.ts";
 import { InfoView } from "./views/info-view.ts";
+import { getThinkingConfig } from "./reasoning-effort-mapper.ts";
 
 export interface ProxyRouterOptions {
   config: ProxyConfig;
@@ -68,7 +69,10 @@ export class ProxyRouter {
       }
     }
 
-    if ((url.pathname === "/v1/models" || url.pathname === "/v1/models/") && request.method === "GET") {
+    if (
+      (url.pathname === "/v1/models" || url.pathname === "/v1/models/") &&
+      request.method === "GET"
+    ) {
       return this.handleListModels(request);
     }
 
@@ -113,7 +117,12 @@ export class ProxyRouter {
     try {
       const selection = this.keyManager.selectKey();
       if (!selection) {
-        requestCounter.inc({ endpoint: "/v1/models", method: request.method, status: 503, result: "failed" });
+        requestCounter.inc({
+          endpoint: "/v1/models",
+          method: request.method,
+          status: 503,
+          result: "failed",
+        });
         resultLabel = "failed";
         return errorResponse("No healthy API keys available", 503, "service_unavailable");
       }
@@ -121,14 +130,24 @@ export class ProxyRouter {
       const result = await this.gemini.listModels(selection.record);
 
       if (!result.ok) {
-        requestCounter.inc({ endpoint: "/v1/models", method: request.method, status: result.status, result: "error" });
+        requestCounter.inc({
+          endpoint: "/v1/models",
+          method: request.method,
+          status: result.status,
+          result: "error",
+        });
         resultLabel = "error";
         return errorResponse("Failed to fetch models", result.status, "upstream_error", {
           upstreamStatus: result.status,
         });
       }
 
-      requestCounter.inc({ endpoint: "/v1/models", method: request.method, status: 200, result: "success" });
+      requestCounter.inc({
+        endpoint: "/v1/models",
+        method: request.method,
+        status: 200,
+        result: "success",
+      });
       return jsonResponse(result.body, { status: result.status });
     } finally {
       activeRequestsGauge.dec({ endpoint: "/v1/models" });
@@ -184,6 +203,29 @@ export class ProxyRouter {
         return errorResponse("Missing required 'messages' array", 400, "invalid_request_error");
       }
 
+      // Convert OpenAI's reasoning_effort to Gemini's thinking_budget
+      // Note: reasoning_effort and thinking_budget overlap, so we convert between them
+      if (body.reasoning_effort !== undefined) {
+        const thinkingConfig = getThinkingConfig(body.reasoning_effort as string);
+
+        body.extra_body = body.extra_body || {};
+        const extraBody = body.extra_body as Record<string, unknown>;
+        extraBody.google = extraBody.google || {};
+        const google = extraBody.google as Record<string, unknown>;
+
+        // Set thinking_config if not already present
+        if (!google.thinking_config) {
+          google.thinking_config = thinkingConfig;
+          logger.debug(
+            { model: body.model, reasoning_effort: body.reasoning_effort, thinking_budget: thinkingConfig.thinking_budget },
+            "Converted reasoning_effort to thinking_budget"
+          );
+        }
+
+        // Remove reasoning_effort before sending to Gemini (it doesn't support this parameter)
+        delete body.reasoning_effort;
+      }
+
       const maxAttempts = Math.max(1, this.keyManager.getActiveKeyCount() || 1);
       const attemptedKeys = new Set<string>();
       let lastFailure: Response | null = null;
@@ -212,10 +254,24 @@ export class ProxyRouter {
 
           // Remove compression headers to ensure OpenAI clients can read the stream
           const headers = new Headers(upstream.headers);
-          headers.delete('content-encoding');
-          headers.delete('content-length');
+          headers.delete("content-encoding");
+          headers.delete("content-length");
 
-          return new Response(upstream.body, {
+          // Transform Gemini's <thought> tags to OpenAI's <think> tags
+          const transformedStream = upstream.body!.pipeThrough(
+            new TransformStream({
+              transform(chunk, controller) {
+                const text = new TextDecoder().decode(chunk);
+                // Replace Gemini's <thought> tags with OpenAI's <think> tags
+                const transformed = text
+                  .replace(/<thought>/g, "<think>")
+                  .replace(/<\/thought>/g, "</think>");
+                controller.enqueue(new TextEncoder().encode(transformed));
+              },
+            })
+          );
+
+          return new Response(transformedStream, {
             status: upstream.status,
             headers,
           });
@@ -226,7 +282,10 @@ export class ProxyRouter {
           this.keyManager.recordSuccess(selection.record.id, elapsed * 1000);
           requestCounter.inc({ endpoint, method: request.method, status: 200, result: "success" });
           resultLabel = "success";
-          return jsonResponse(upstream.body, { status: upstream.status });
+
+          // Transform <thought> to <think> in non-streaming responses
+          const transformedBody = this.transformThinkingTags(upstream.body);
+          return jsonResponse(transformedBody, { status: upstream.status });
         }
 
         const isRateLimit = upstream.status === 429;
@@ -248,7 +307,12 @@ export class ProxyRouter {
       }
 
       if (lastFailure) {
-        requestCounter.inc({ endpoint, method: request.method, status: lastFailure.status ?? 500, result: "failed" });
+        requestCounter.inc({
+          endpoint,
+          method: request.method,
+          status: lastFailure.status ?? 500,
+          result: "failed",
+        });
         resultLabel = "failed";
         return lastFailure;
       }
@@ -262,7 +326,11 @@ export class ProxyRouter {
     }
   }
 
-  private async handleGenericProxy(request: Request, endpoint: string, upstreamUrl: string): Promise<Response> {
+  private async handleGenericProxy(
+    request: Request,
+    endpoint: string,
+    upstreamUrl: string,
+  ): Promise<Response> {
     const endTimer = this.startRequestTimer(endpoint, request.method);
     activeRequestsGauge.inc({ endpoint });
     let resultLabel = "success";
@@ -278,7 +346,12 @@ export class ProxyRouter {
       const upstream = await this.gemini.forward(upstreamUrl, body, selection.record);
 
       if (!upstream.ok) {
-        requestCounter.inc({ endpoint, method: request.method, status: upstream.status, result: "error" });
+        requestCounter.inc({
+          endpoint,
+          method: request.method,
+          status: upstream.status,
+          result: "error",
+        });
         resultLabel = "error";
         return errorResponse("Failed to forward request", upstream.status, "upstream_error", {
           upstreamStatus: upstream.status,
@@ -339,5 +412,16 @@ export class ProxyRouter {
       const diff = Number(process.hrtime.bigint() - start) / 1_000_000_000;
       requestDuration.observe({ endpoint, method, result }, diff);
     };
+  }
+
+  /**
+   * Transform Gemini's <thought> tags to OpenAI's <think> tags in response body
+   */
+  private transformThinkingTags(body: Record<string, unknown>): Record<string, unknown> {
+    const bodyStr = JSON.stringify(body);
+    const transformed = bodyStr
+      .replace(/<thought>/g, "<think>")
+      .replace(/<\/thought>/g, "</think>");
+    return JSON.parse(transformed);
   }
 }

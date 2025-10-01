@@ -88,7 +88,7 @@ export class GeminiClient {
     const result = await this.httpClient.get(endpoint, headers);
 
     if (result.ok) {
-      result.body = this.transformer.transformModelList(result.body);
+      result.body = await this.transformer.transformModelList(result.body);
     }
 
     return result;
@@ -106,7 +106,7 @@ export class GeminiClient {
     const result = await this.httpClient.get(endpoint, headers);
 
     if (result.ok) {
-      result.body = this.transformer.transformModel(result.body);
+      result.body = await this.transformer.transformModel(result.body);
     }
 
     return result;
