@@ -1,11 +1,10 @@
 import { startProxyServer, type ProxyServerContext } from "../../src/server/server.ts";
 
 declare global {
-   
   var __geminiProxyServerContext: ProxyServerContext | undefined;
-   
+
   var __geminiProxyServerLoader: Promise<ProxyServerContext> | undefined;
-   
+
   var __geminiProxyOriginalFetch: typeof fetch | undefined;
 }
 
@@ -18,9 +17,13 @@ if (!globalThis.__geminiProxyServerLoader) {
 
     if (!globalThis.__geminiProxyOriginalFetch) {
       globalThis.__geminiProxyOriginalFetch = globalThis.fetch.bind(globalThis);
-      globalThis.fetch = (async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
+      globalThis.fetch = (async (
+        input: Request | string | URL,
+        init?: RequestInit,
+      ): Promise<Response> => {
         const originalFetch = globalThis.__geminiProxyOriginalFetch ?? fetch;
-        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        const url =
+          typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
         if (url.startsWith("http://localhost:4806")) {
           const request = input instanceof Request ? input : new Request(url, init);
           return context.fetch(request);

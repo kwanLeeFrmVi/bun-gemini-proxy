@@ -1,6 +1,8 @@
 import type {
   ApiKeyRecord,
   CircuitBreakerState,
+  ClientMetricsSnapshot,
+  ClientUsageStats,
   HealthScoreState,
   RequestMetricsSnapshot,
 } from "../types/key.ts";
@@ -15,6 +17,7 @@ export interface PersistedState {
   health: HealthScoreState[];
   circuits: CircuitBreakerState[];
   metrics: RequestMetricsSnapshot[];
+  clientMetrics?: ClientMetricsSnapshot[];
 }
 
 /**
@@ -56,4 +59,19 @@ export interface StateStore {
    * Get usage statistics for the last 7 days.
    */
   getWeeklyUsageStats(): UsageStats[];
+
+  /**
+   * Record a client metrics snapshot.
+   */
+  recordClientMetrics(snapshot: ClientMetricsSnapshot): void;
+
+  /**
+   * Get client usage statistics for the last 24 hours.
+   */
+  getClientDailyStats(): ClientUsageStats[];
+
+  /**
+   * Get client usage statistics for the last 7 days.
+   */
+  getClientWeeklyStats(): ClientUsageStats[];
 }

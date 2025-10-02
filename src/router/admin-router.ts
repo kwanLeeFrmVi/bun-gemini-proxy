@@ -172,7 +172,10 @@ export class AdminRouter {
     const keysRemoved = [...beforeIdSet].filter((id) => !afterIdSet.has(id)).length;
     const keysUpdated = [...afterIdSet].filter((id) => beforeIdSet.has(id)).length;
 
-    logger.info({ keysAdded, keysRemoved, keysUpdated }, "Configuration reloaded via admin endpoint");
+    logger.info(
+      { keysAdded, keysRemoved, keysUpdated },
+      "Configuration reloaded via admin endpoint",
+    );
 
     return jsonResponse({
       success: true,

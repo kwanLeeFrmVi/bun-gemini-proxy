@@ -54,10 +54,7 @@ export class CodexCLIRouter {
   private readonly cliTimeoutMs: number = 120000; // 2 minutes for agent operations
 
   // Codex supports GPT-5 models (reasoning effort is passed via model_reasoning_effort parameter)
-  private readonly supportedModels = [
-    "gpt-5-codex",
-    "gpt-5",
-  ];
+  private readonly supportedModels = ["gpt-5-codex", "gpt-5"];
 
   constructor(options: CodexCLIRouterOptions) {
     this.config = options.config;
@@ -144,7 +141,8 @@ export class CodexCLIRouter {
         "Processing chat completion via Codex CLI",
       );
 
-      const imageAttachments = images.length > 0 ? await this.prepareImageAttachments(images) : null;
+      const imageAttachments =
+        images.length > 0 ? await this.prepareImageAttachments(images) : null;
 
       // Handle streaming response
       if (isStreaming) {
@@ -207,10 +205,7 @@ export class CodexCLIRouter {
         requestCounter.inc({ ...labels, status: "200" });
         requestDuration.observe(labels, durationMs / 1000);
 
-        logger.info(
-          { model: normalizedModel, durationMs },
-          "Codex chat completion successful",
-        );
+        logger.info({ model: normalizedModel, durationMs }, "Codex chat completion successful");
 
         return jsonResponse(openaiResponse);
       } finally {
@@ -279,10 +274,7 @@ export class CodexCLIRouter {
       const version = await this.cliClient.getVersion();
 
       if (!isAvailable) {
-        return jsonResponse(
-          { status: "unhealthy", error: "codex CLI not found" },
-          { status: 503 },
-        );
+        return jsonResponse({ status: "unhealthy", error: "codex CLI not found" }, { status: 503 });
       }
 
       return jsonResponse({
@@ -339,7 +331,7 @@ export class CodexCLIRouter {
                 : undefined,
           })) {
             controller.enqueue(
-              new TextEncoder().encode(transformer.createContentChunk(model, content))
+              new TextEncoder().encode(transformer.createContentChunk(model, content)),
             );
           }
 
@@ -365,7 +357,7 @@ export class CodexCLIRouter {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
         "X-Accel-Buffering": "no", // Disable nginx buffering
       },
     });
@@ -484,7 +476,10 @@ export class CodexCLIRouter {
     }
 
     const contentType = response.headers.get("content-type");
-    const extension = this.resolveImageExtension(contentType?.split(";")[0]?.toLowerCase(), imageUrl);
+    const extension = this.resolveImageExtension(
+      contentType?.split(";")[0]?.toLowerCase(),
+      imageUrl,
+    );
 
     return this.writeTempImage(buffer, extension);
   }
@@ -493,7 +488,11 @@ export class CodexCLIRouter {
    * Write image buffer to a unique temporary file
    */
   private async writeTempImage(buffer: Buffer, extension: string): Promise<string> {
-    const normalizedExtension = extension?.startsWith(".") ? extension : extension ? `.${extension}` : ".bin";
+    const normalizedExtension = extension?.startsWith(".")
+      ? extension
+      : extension
+        ? `.${extension}`
+        : ".bin";
     const filePath = join(tmpdir(), `codex-image-${randomUUID()}${normalizedExtension}`);
     await fs.writeFile(filePath, buffer);
     return filePath;
@@ -534,7 +533,7 @@ export class CodexCLIRouter {
     }
 
     await Promise.allSettled(
-      tempFiles.map(async filePath => {
+      tempFiles.map(async (filePath) => {
         try {
           await fs.unlink(filePath);
         } catch (error) {

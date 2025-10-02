@@ -7,14 +7,16 @@ export interface OpenAIChatRequest {
   model: string;
   messages: Array<{
     role: "system" | "user" | "assistant";
-    content: string | Array<{
-      type: "text" | "image_url";
-      text?: string;
-      image_url?: {
-        url: string;
-        detail?: "auto" | "low" | "high";
-      };
-    }>;
+    content:
+      | string
+      | Array<{
+          type: "text" | "image_url";
+          text?: string;
+          image_url?: {
+            url: string;
+            detail?: "auto" | "low" | "high";
+          };
+        }>;
   }>;
   temperature?: number;
   max_tokens?: number;
@@ -77,12 +79,9 @@ export class CLITransformer {
     const images: string[] = [];
 
     const prompt = messages
-      .map(msg => {
-        const rolePrefix = msg.role === "system"
-          ? "System: "
-          : msg.role === "user"
-          ? "User: "
-          : "Assistant: ";
+      .map((msg) => {
+        const rolePrefix =
+          msg.role === "system" ? "System: " : msg.role === "user" ? "User: " : "Assistant: ";
 
         // Handle both string content and multi-part content
         if (typeof msg.content === "string") {
@@ -90,7 +89,7 @@ export class CLITransformer {
         } else {
           // Extract text and image URLs from multi-part content
           const textParts = msg.content
-            .map(part => {
+            .map((part) => {
               if (part.type === "text" && part.text) {
                 return part.text;
               } else if (part.type === "image_url" && part.image_url?.url) {
@@ -130,9 +129,10 @@ export class CLITransformer {
    */
   toOpenAIResponse(cliResponse: CLIResponse, model: string): OpenAIChatResponse {
     const normalizedModel = this.normalizeModel(model);
-    const modelStats = cliResponse.stats.models[normalizedModel] ||
-                      cliResponse.stats.models[`models/${normalizedModel}`] ||
-                      Object.values(cliResponse.stats.models)[0];
+    const modelStats =
+      cliResponse.stats.models[normalizedModel] ||
+      cliResponse.stats.models[`models/${normalizedModel}`] ||
+      Object.values(cliResponse.stats.models)[0];
 
     // Generate unique ID and timestamp
     const id = `chatcmpl-${this.generateId()}`;
@@ -178,7 +178,7 @@ export class CLITransformer {
 
     return {
       object: "list",
-      data: this.supportedModels.map(modelId => ({
+      data: this.supportedModels.map((modelId) => ({
         id: modelId,
         object: "model" as const,
         created,
@@ -191,7 +191,8 @@ export class CLITransformer {
    * Generate random ID for responses
    */
   private generateId(): string {
-    return Math.random().toString(36).substring(2, 15) +
-           Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    );
   }
 }

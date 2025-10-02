@@ -9,7 +9,7 @@ Welcome to the Gemini Proxy Server! This is a high-performance, production-ready
 3. [Architecture Overview](#architecture-overview)
 4. [Quick Start](#quick-start)
 5. [API Endpoints](#api-endpoints)
-   - [Main Proxy (/v1/*)](#main-proxy-v1)
+   - [Main Proxy (/v1/\*)](#main-proxy-v1)
    - [Gemini CLI Backend](#gemini-cli-backend)
    - [Codex CLI Backend](#codex-cli-backend)
 6. [Admin Endpoints](#admin-endpoints)
@@ -64,17 +64,20 @@ The Gemini Proxy Server is a **Bun-based TypeScript proxy** that provides:
 Run directly from GitHub without cloning:
 
 1. **Create a working directory**
+
    ```bash
    mkdir my-gemini-proxy && cd my-gemini-proxy
    ```
 
 2. **Download config templates**
+
    ```bash
    curl -o proxy.yaml https://raw.githubusercontent.com/your-org/bun-gemini-proxy/main/proxy.example.yaml
    curl -o keys.yaml https://raw.githubusercontent.com/your-org/bun-gemini-proxy/main/keys.example.yaml
    ```
 
 3. **Edit keys.yaml with your API keys**
+
    ```yaml
    keys:
      - name: "primary-key"
@@ -84,6 +87,7 @@ Run directly from GitHub without cloning:
    ```
 
 4. **Run the proxy**
+
    ```bash
    bunx github:your-org/bun-gemini-proxy
    ```
@@ -91,6 +95,7 @@ Run directly from GitHub without cloning:
 5. **Open the user guide**
 
    The server will display:
+
    ```
    🚀 Gemini Proxy Server is running!
    📖 Open user guide: http://0.0.0.0:8000/help
@@ -103,12 +108,14 @@ Run directly from GitHub without cloning:
 For development or customization:
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-org/bun-gemini-proxy.git
    cd bun-gemini-proxy
    ```
 
 2. **Install dependencies**
+
    ```bash
    bun install
    ```
@@ -121,6 +128,7 @@ For development or customization:
    ```
 
    Edit `keys.yaml`:
+
    ```yaml
    keys:
      - name: "primary-key"
@@ -136,6 +144,7 @@ For development or customization:
 4. **Configure proxy settings** (optional)
 
    Edit `proxy.yaml`:
+
    ```yaml
    proxy:
      host: "0.0.0.0"
@@ -143,16 +152,18 @@ For development or customization:
      adminToken: "your-secure-admin-token"
      requestTimeoutMs: 10000
      upstreamBaseUrl: "https://generativelanguage.googleapis.com"
-     accessTokens: []  # Empty = no authentication required
+     accessTokens: [] # Empty = no authentication required
      requireAuth: false
    ```
 
 5. **Start the server**
+
    ```bash
    bun run start
    ```
 
 6. **Verify installation**
+
    ```bash
    # Check health
    curl http://localhost:8000/health
@@ -191,6 +202,7 @@ The proxy supports **three backends**, each optimized for different use cases:
 **Best For**: Production workloads, high-throughput applications
 
 **Features**:
+
 - ✅ Intelligent key rotation across multiple Gemini API keys
 - ✅ Circuit breaking and automatic failover
 - ✅ Health monitoring and recovery
@@ -208,6 +220,7 @@ The proxy supports **three backends**, each optimized for different use cases:
 **Best For**: Local development, testing with GEMINI.md context
 
 **Features**:
+
 - ✅ Uses local `gemini` CLI tool
 - ✅ Automatically loads GEMINI.md project context
 - ✅ No API key rotation (single CLI session)
@@ -226,6 +239,7 @@ The proxy supports **three backends**, each optimized for different use cases:
 **Best For**: Claude-powered agent workflows, tool-using tasks
 
 **Features**:
+
 - ✅ Uses local `codex` CLI tool (Claude Code CLI)
 - ✅ Agent-aware responses with reasoning
 - ✅ Extended timeout (120s) for complex operations
@@ -242,13 +256,13 @@ The proxy supports **three backends**, each optimized for different use cases:
 
 ### Backend Selection Guide
 
-| Use Case | Recommended Backend | Why |
-|----------|-------------------|-----|
-| Production API | `/v1/*` | Full features, key rotation, streaming |
-| Local Gemini dev | `/gemini-cli/v1/*` | Project context, no API quota |
-| Claude agent tasks | `/codex-cli/v1/*` | Reasoning, tool use, local execution |
-| Testing/prototyping | `/gemini-cli/v1/*` | No rate limits, fast iteration |
-| High availability | `/v1/*` | Circuit breaking, automatic failover |
+| Use Case            | Recommended Backend | Why                                    |
+| ------------------- | ------------------- | -------------------------------------- |
+| Production API      | `/v1/*`             | Full features, key rotation, streaming |
+| Local Gemini dev    | `/gemini-cli/v1/*`  | Project context, no API quota          |
+| Claude agent tasks  | `/codex-cli/v1/*`   | Reasoning, tool use, local execution   |
+| Testing/prototyping | `/gemini-cli/v1/*`  | No rate limits, fast iteration         |
+| High availability   | `/v1/*`             | Circuit breaking, automatic failover   |
 
 ---
 
@@ -314,7 +328,7 @@ proxy:
 
 ## API Endpoints
 
-### Main Proxy (/v1/*)
+### Main Proxy (/v1/\*)
 
 Full-featured Gemini API proxy with key rotation and circuit breaking.
 
@@ -359,6 +373,7 @@ curl http://localhost:8000/v1/models
 ```
 
 Response:
+
 ```json
 {
   "object": "list",
@@ -419,6 +434,7 @@ curl http://localhost:8000/gemini-cli/v1/chat/completions \
 **Supported Models**: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash-exp`, `gemini-exp-1206`
 
 **Limitations**:
+
 - ❌ No streaming support (`stream: true` returns error)
 - ⏱️ 60-second timeout (includes GEMINI.md loading)
 
@@ -439,6 +455,7 @@ curl http://localhost:8000/gemini-cli/v1/health
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -471,6 +488,7 @@ curl http://localhost:8000/codex-cli/v1/chat/completions \
 ```
 
 **Supported Models**:
+
 - `claude-sonnet-4` (default)
 - `claude-sonnet-4-5`
 - `claude-opus-4`
@@ -479,6 +497,7 @@ curl http://localhost:8000/codex-cli/v1/chat/completions \
 - `claude-3-opus-20240229`
 
 **Limitations**:
+
 - ❌ No streaming support (`stream: true` returns error)
 - ⏱️ 120-second timeout (agent operations take longer)
 
@@ -499,6 +518,7 @@ curl http://localhost:8000/codex-cli/v1/health
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -525,6 +545,7 @@ curl http://localhost:8000/admin/health \
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -540,6 +561,7 @@ Response:
 ```
 
 **Status Values**:
+
 - `healthy` - All keys operational
 - `degraded` - Some keys failing
 - `unhealthy` - No healthy keys available
@@ -554,6 +576,7 @@ curl http://localhost:8000/admin/keys \
 ```
 
 Response:
+
 ```json
 {
   "keys": [
@@ -580,6 +603,7 @@ Response:
 ```
 
 **Status Values**:
+
 - `active` - Key is healthy and in rotation
 - `recovering` - Key is in cooldown after failures
 - `disabled` - Key manually disabled or permanently failed
@@ -601,6 +625,7 @@ curl -X POST http://localhost:8000/admin/keys/backup-key/disable \
 ```
 
 Response:
+
 ```json
 {
   "success": true,
@@ -621,6 +646,7 @@ curl -X POST http://localhost:8000/admin/config/reload \
 ```
 
 Response:
+
 ```json
 {
   "success": true,
@@ -641,6 +667,7 @@ curl http://localhost:8000/admin/metrics \
 ```
 
 Returns Prometheus-formatted metrics:
+
 ```
 # HELP proxy_requests_total Total number of proxy requests
 # TYPE proxy_requests_total counter
@@ -659,33 +686,33 @@ proxy_request_duration_seconds_bucket{endpoint="/v1/chat/completions",le="0.5"} 
 ### JavaScript/TypeScript (Bun/Node.js)
 
 ```javascript
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 // Main proxy with key rotation
 const mainClient = new OpenAI({
-  apiKey: 'any-key-works',  // Not validated when auth disabled
-  baseURL: 'http://localhost:8000/v1',
+  apiKey: "any-key-works", // Not validated when auth disabled
+  baseURL: "http://localhost:8000/v1",
 });
 
 // Gemini CLI backend
 const geminiClient = new OpenAI({
-  apiKey: 'not-required',
-  baseURL: 'http://localhost:8000/gemini-cli/v1',
+  apiKey: "not-required",
+  baseURL: "http://localhost:8000/gemini-cli/v1",
 });
 
 // Codex CLI backend (Claude)
 const codexClient = new OpenAI({
-  apiKey: 'not-required',
-  baseURL: 'http://localhost:8000/codex-cli/v1',
+  apiKey: "not-required",
+  baseURL: "http://localhost:8000/codex-cli/v1",
 });
 
 // Non-streaming example
 async function nonStreaming() {
   const response = await mainClient.chat.completions.create({
-    model: 'gemini-2.0-flash-exp',
+    model: "gemini-2.0-flash-exp",
     messages: [
-      { role: 'system', content: 'You are a helpful assistant.' },
-      { role: 'user', content: 'What is TypeScript?' }
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: "What is TypeScript?" },
     ],
     temperature: 0.7,
     max_tokens: 1000,
@@ -697,13 +724,13 @@ async function nonStreaming() {
 // Streaming example
 async function streaming() {
   const stream = await mainClient.chat.completions.create({
-    model: 'gemini-2.0-flash-exp',
-    messages: [{ role: 'user', content: 'Count to 10' }],
+    model: "gemini-2.0-flash-exp",
+    messages: [{ role: "user", content: "Count to 10" }],
     stream: true,
   });
 
   for await (const chunk of stream) {
-    process.stdout.write(chunk.choices[0]?.delta?.content || '');
+    process.stdout.write(chunk.choices[0]?.delta?.content || "");
   }
 }
 
@@ -711,17 +738,17 @@ async function streaming() {
 async function withErrorHandling() {
   try {
     const response = await mainClient.chat.completions.create({
-      model: 'gemini-2.0-flash-exp',
-      messages: [{ role: 'user', content: 'Hello!' }],
+      model: "gemini-2.0-flash-exp",
+      messages: [{ role: "user", content: "Hello!" }],
     });
     console.log(response.choices[0].message.content);
   } catch (error) {
     if (error.status === 503) {
-      console.error('All API keys are unhealthy');
+      console.error("All API keys are unhealthy");
     } else if (error.status === 429) {
-      console.error('Rate limit exceeded, retry after:', error.headers['retry-after']);
+      console.error("Rate limit exceeded, retry after:", error.headers["retry-after"]);
     } else {
-      console.error('Request failed:', error.message);
+      console.error("Request failed:", error.message);
     }
   }
 }
@@ -910,27 +937,28 @@ client.chat(
 ```yaml
 proxy:
   # Server binding
-  host: "0.0.0.0"           # Listen on all interfaces
-  port: 8000                # HTTP port
+  host: "0.0.0.0" # Listen on all interfaces
+  port: 8000 # HTTP port
 
   # Admin authentication
-  adminToken: "secure-token-here"  # Set to null to disable admin auth
+  adminToken: "secure-token-here" # Set to null to disable admin auth
 
   # Request handling
-  requestTimeoutMs: 10000   # 10 second timeout per request
+  requestTimeoutMs: 10000 # 10 second timeout per request
   maxPayloadBytes: 10485760 # 10MB payload limit
 
   # Upstream Gemini API
   upstreamBaseUrl: "https://generativelanguage.googleapis.com"
 
   # Client authentication (optional)
-  accessTokens:              # List of valid access tokens
+  accessTokens: # List of valid access tokens
     - "sk-proxy-token-1"
     - "sk-proxy-token-2"
-  requireAuth: true          # Set to false to disable auth
+  requireAuth: true # Set to false to disable auth
 ```
 
 **Authentication Behavior**:
+
 - `accessTokens: []` + `requireAuth: false` → No authentication
 - `accessTokens: []` + `requireAuth: true` → No authentication (auto-disabled)
 - `accessTokens: [...]` + `requireAuth: true` → Authentication required
@@ -940,15 +968,15 @@ proxy:
 
 ```yaml
 keys:
-  - name: "production-key-1"       # Friendly name for logging
-    key: "AIzaSyXXXXXXXXXXXXXXXX"  # Gemini API key
-    weight: 2                      # Higher weight = more traffic (default: 1)
-    cooldownSeconds: 30            # Recovery cooldown (default: 30)
+  - name: "production-key-1" # Friendly name for logging
+    key: "AIzaSyXXXXXXXXXXXXXXXX" # Gemini API key
+    weight: 2 # Higher weight = more traffic (default: 1)
+    cooldownSeconds: 30 # Recovery cooldown (default: 30)
 
   - name: "production-key-2"
     key: "AIzaSyYYYYYYYYYYYYYYYY"
     weight: 1
-    cooldownSeconds: 60            # Longer cooldown for rate-limited keys
+    cooldownSeconds: 60 # Longer cooldown for rate-limited keys
 
   - name: "backup-key"
     key: "AIzaSyZZZZZZZZZZZZZZZZ"
@@ -964,21 +992,22 @@ keys:
 
 ```yaml
 monitoring:
-  healthCheckIntervalSeconds: 30  # Check key health every 30s
-  failureThreshold: 3             # Disable key after 3 consecutive failures
-  recoveryTimeSeconds: 300        # 5 minutes recovery before re-enabling
-  windowSeconds: 300              # 5-minute sliding window for health calc
+  healthCheckIntervalSeconds: 30 # Check key health every 30s
+  failureThreshold: 3 # Disable key after 3 consecutive failures
+  recoveryTimeSeconds: 300 # 5 minutes recovery before re-enabling
+  windowSeconds: 300 # 5-minute sliding window for health calc
 ```
 
 ### Persistence Configuration (`proxy.yaml`)
 
 ```yaml
 persistence:
-  sqlitePath: ".runtime/state.sqlite"      # Primary state storage
-  fallbackJsonPath: ".runtime/state.json"  # Backup state storage
+  sqlitePath: ".runtime/state.sqlite" # Primary state storage
+  fallbackJsonPath: ".runtime/state.json" # Backup state storage
 ```
 
 **State Includes**:
+
 - Key health scores
 - Success/failure counters
 - Last error timestamps
@@ -990,14 +1019,14 @@ persistence:
 
 ### Gemini Models (Main Proxy `/v1/*`)
 
-| Model ID | Description | Best For | Context Window |
-|----------|-------------|----------|----------------|
-| `gemini-2.5-pro` | Most capable model | Complex reasoning, long context | 2M tokens |
-| `gemini-2.5-flash` | Fast and efficient | Quick responses, high throughput | 1M tokens |
-| `gemini-2.0-flash-exp` | Experimental features | Cutting-edge capabilities | 1M tokens |
-| `gemini-1.5-pro` | Previous generation | Stable, production-ready | 2M tokens |
-| `gemini-1.5-flash` | Fast previous gen | Cost-effective, fast | 1M tokens |
-| `text-embedding-004` | Text embeddings | Semantic search, RAG | N/A |
+| Model ID               | Description           | Best For                         | Context Window |
+| ---------------------- | --------------------- | -------------------------------- | -------------- |
+| `gemini-2.5-pro`       | Most capable model    | Complex reasoning, long context  | 2M tokens      |
+| `gemini-2.5-flash`     | Fast and efficient    | Quick responses, high throughput | 1M tokens      |
+| `gemini-2.0-flash-exp` | Experimental features | Cutting-edge capabilities        | 1M tokens      |
+| `gemini-1.5-pro`       | Previous generation   | Stable, production-ready         | 2M tokens      |
+| `gemini-1.5-flash`     | Fast previous gen     | Cost-effective, fast             | 1M tokens      |
+| `text-embedding-004`   | Text embeddings       | Semantic search, RAG             | N/A            |
 
 ### Gemini CLI Models (`/gemini-cli/v1/*`)
 
@@ -1005,14 +1034,14 @@ Supported: `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash-exp`, `gemini
 
 ### Codex CLI Models (`/codex-cli/v1/*`)
 
-| Model ID | Description | Best For |
-|----------|-------------|----------|
-| `claude-sonnet-4` | Balanced (default) | General-purpose tasks |
-| `claude-sonnet-4-5` | Latest Sonnet | Improved reasoning |
-| `claude-opus-4` | Most capable | Complex analysis |
-| `claude-haiku-4` | Fastest | Quick responses |
-| `claude-3-5-sonnet-20241022` | Legacy Sonnet | Compatibility |
-| `claude-3-opus-20240229` | Legacy Opus | Compatibility |
+| Model ID                     | Description        | Best For              |
+| ---------------------------- | ------------------ | --------------------- |
+| `claude-sonnet-4`            | Balanced (default) | General-purpose tasks |
+| `claude-sonnet-4-5`          | Latest Sonnet      | Improved reasoning    |
+| `claude-opus-4`              | Most capable       | Complex analysis      |
+| `claude-haiku-4`             | Fastest            | Quick responses       |
+| `claude-3-5-sonnet-20241022` | Legacy Sonnet      | Compatibility         |
+| `claude-3-opus-20240229`     | Legacy Opus        | Compatibility         |
 
 ---
 
@@ -1047,6 +1076,7 @@ All responses follow OpenAI's format for SDK compatibility.
 ```
 
 **Finish Reasons**:
+
 - `stop` - Natural completion
 - `length` - Max tokens reached
 - `content_filter` - Content policy violation
@@ -1087,15 +1117,15 @@ data: [DONE]
 
 ### HTTP Status Codes
 
-| Code | Error Type | Meaning | Action |
-|------|-----------|---------|--------|
-| 400 | Bad Request | Invalid request format | Fix request payload |
-| 401 | Unauthorized | Invalid access token | Check authorization header |
-| 413 | Payload Too Large | Request exceeds 10MB | Reduce message size |
-| 429 | Too Many Requests | Rate limit exceeded | Retry with exponential backoff |
-| 500 | Internal Server Error | Proxy error | Check logs, report bug |
-| 502 | Bad Gateway | Upstream unreachable | Check network, Gemini status |
-| 503 | Service Unavailable | All keys unhealthy | Check key validity, rate limits |
+| Code | Error Type            | Meaning                | Action                          |
+| ---- | --------------------- | ---------------------- | ------------------------------- |
+| 400  | Bad Request           | Invalid request format | Fix request payload             |
+| 401  | Unauthorized          | Invalid access token   | Check authorization header      |
+| 413  | Payload Too Large     | Request exceeds 10MB   | Reduce message size             |
+| 429  | Too Many Requests     | Rate limit exceeded    | Retry with exponential backoff  |
+| 500  | Internal Server Error | Proxy error            | Check logs, report bug          |
+| 502  | Bad Gateway           | Upstream unreachable   | Check network, Gemini status    |
+| 503  | Service Unavailable   | All keys unhealthy     | Check key validity, rate limits |
 
 ### Common Error Scenarios
 
@@ -1104,6 +1134,7 @@ data: [DONE]
 **Cause**: All API keys are unhealthy or disabled
 
 **Troubleshooting**:
+
 1. Check key health: `curl http://localhost:8000/admin/keys`
 2. Verify key validity in Google AI Studio
 3. Check rate limits and quotas
@@ -1115,6 +1146,7 @@ data: [DONE]
 **Cause**: Request body exceeds 10MB limit
 
 **Solution**:
+
 - Reduce message content size
 - Split large requests into multiple calls
 - Adjust `maxPayloadBytes` in config (not recommended)
@@ -1124,6 +1156,7 @@ data: [DONE]
 **Cause**: Rate limit exceeded on all keys
 
 **Solution**:
+
 - Implement exponential backoff retry
 - Add more API keys to config
 - Reduce request frequency
@@ -1134,6 +1167,7 @@ data: [DONE]
 **Cause**: Cannot reach upstream Gemini API
 
 **Troubleshooting**:
+
 1. Check network connectivity: `curl https://generativelanguage.googleapis.com`
 2. Verify DNS resolution
 3. Check firewall/proxy settings
@@ -1145,6 +1179,7 @@ data: [DONE]
 **Cause**: Client not handling SSE properly
 
 **Solution**:
+
 - Use `-N` flag with curl: `curl -N ...`
 - Ensure `stream: true` in request body
 - Verify OpenAI SDK version supports streaming
@@ -1155,6 +1190,7 @@ data: [DONE]
 **Cause**: CLI tool not installed or not in PATH
 
 **Troubleshooting**:
+
 1. Check CLI availability: `curl http://localhost:8000/codex-cli/v1/health`
 2. Verify installation: `which codex` or `which gemini`
 3. Add CLI to PATH
@@ -1170,6 +1206,7 @@ LOG_LEVEL=debug bun run start
 ```
 
 Logs include:
+
 - Request ID for tracing
 - Key selection and rotation
 - Upstream request/response
@@ -1190,6 +1227,7 @@ The proxy uses **weighted round-robin** with health-aware selection:
 4. **Automatic Recovery**: Failed keys re-enter rotation after `recoveryTimeSeconds`
 
 **Optimize for**:
+
 - **High Availability**: Set equal weights, add more keys
 - **Cost Optimization**: Set higher weight on cheaper/higher-quota keys
 - **Performance**: Set higher weight on lower-latency keys
@@ -1202,10 +1240,10 @@ The proxy uses **weighted round-robin** with health-aware selection:
 keys:
   - name: "peak-hours-key"
     key: "..."
-    weight: 3          # 75% of traffic
+    weight: 3 # 75% of traffic
   - name: "off-peak-key"
     key: "..."
-    weight: 1          # 25% of traffic
+    weight: 1 # 25% of traffic
 ```
 
 **Strategy 2: Longer Cooldown for Rate-Limited Keys**
@@ -1214,15 +1252,16 @@ keys:
 keys:
   - name: "free-tier-key"
     key: "..."
-    cooldownSeconds: 300  # 5 minutes before retry
+    cooldownSeconds: 300 # 5 minutes before retry
   - name: "paid-key"
     key: "..."
-    cooldownSeconds: 30   # 30 seconds before retry
+    cooldownSeconds: 30 # 30 seconds before retry
 ```
 
 **Strategy 3: Monitor Rate Limit Headers**
 
 The proxy logs rate limit information from upstream responses. Monitor for:
+
 - `X-RateLimit-Remaining`
 - `X-RateLimit-Reset`
 - `Retry-After`
@@ -1233,21 +1272,23 @@ Adjust circuit breaker sensitivity in `proxy.yaml`:
 
 ```yaml
 monitoring:
-  failureThreshold: 3          # Failures before circuit opens
-  recoveryTimeSeconds: 300     # Cooldown before retry
-  windowSeconds: 300           # Sliding window for health calc
+  failureThreshold: 3 # Failures before circuit opens
+  recoveryTimeSeconds: 300 # Cooldown before retry
+  windowSeconds: 300 # Sliding window for health calc
 ```
 
 **Aggressive (Fast Failover)**:
+
 ```yaml
-failureThreshold: 2           # Open after 2 failures
-recoveryTimeSeconds: 60       # Retry after 1 minute
+failureThreshold: 2 # Open after 2 failures
+recoveryTimeSeconds: 60 # Retry after 1 minute
 ```
 
 **Conservative (Tolerate Transient Errors)**:
+
 ```yaml
-failureThreshold: 5           # Open after 5 failures
-recoveryTimeSeconds: 600      # Retry after 10 minutes
+failureThreshold: 5 # Open after 5 failures
+recoveryTimeSeconds: 600 # Retry after 10 minutes
 ```
 
 ### Performance Optimization
@@ -1259,9 +1300,9 @@ The proxy uses `undici` with connection pooling. Tune for high throughput:
 ```typescript
 // In HttpClient (src/router/client/http-client.ts)
 const agent = new Agent({
-  connections: 100,           // Max concurrent connections
-  pipelining: 10,             // Requests per connection
-  keepAliveTimeout: 60000,    // 60s keep-alive
+  connections: 100, // Max concurrent connections
+  pipelining: 10, // Requests per connection
+  keepAliveTimeout: 60000, // 60s keep-alive
 });
 ```
 
@@ -1271,12 +1312,13 @@ Adjust timeouts based on workload:
 
 ```yaml
 proxy:
-  requestTimeoutMs: 30000     # 30s for long-running requests
+  requestTimeoutMs: 30000 # 30s for long-running requests
 ```
 
 **3. Key Distribution**
 
 For high-volume workloads:
+
 - Use 5+ keys for redundancy
 - Set equal weights for even distribution
 - Monitor key health in real-time
@@ -1302,6 +1344,7 @@ curl -X POST http://localhost:8000/admin/config/reload \
 ```
 
 **Reloadable**:
+
 - ✅ API keys (add/remove/update)
 - ✅ Key weights and cooldowns
 - ✅ Monitoring thresholds
@@ -1309,6 +1352,7 @@ curl -X POST http://localhost:8000/admin/config/reload \
 - ✅ Admin token
 
 **Requires Restart**:
+
 - ❌ Host/port changes
 - ❌ Persistence paths
 - ❌ SSL/TLS settings
@@ -1320,6 +1364,7 @@ curl -X POST http://localhost:8000/admin/config/reload \
 ### Production Deployment
 
 **Security Checklist**:
+
 - [ ] Enable `requireAuth: true` and set strong access tokens
 - [ ] Set secure `adminToken` for admin endpoints
 - [ ] Use HTTPS with reverse proxy (nginx, Caddy)
@@ -1328,6 +1373,7 @@ curl -X POST http://localhost:8000/admin/config/reload \
 - [ ] Never commit keys to version control
 
 **Reliability Checklist**:
+
 - [ ] Configure 3+ API keys for redundancy
 - [ ] Set up health monitoring and alerting
 - [ ] Configure appropriate timeouts
@@ -1336,6 +1382,7 @@ curl -X POST http://localhost:8000/admin/config/reload \
 - [ ] Use process manager (PM2, systemd) for auto-restart
 
 **Performance Checklist**:
+
 - [ ] Tune `requestTimeoutMs` for your workload
 - [ ] Configure appropriate `failureThreshold`
 - [ ] Monitor Prometheus metrics
@@ -1465,8 +1512,8 @@ async function cachedCompletion(prompt) {
   }
 
   const response = await client.chat.completions.create({
-    model: 'gemini-2.5-flash',
-    messages: [{ role: 'user', content: prompt }]
+    model: "gemini-2.5-flash",
+    messages: [{ role: "user", content: prompt }],
   });
 
   cache.set(prompt, response);
@@ -1519,6 +1566,7 @@ rm .runtime/state.sqlite-wal
 **All Keys Showing Unhealthy**
 
 1. **Verify API keys**:
+
    ```bash
    # Test key directly with Gemini API
    curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=YOUR_KEY" \
@@ -1527,12 +1575,14 @@ rm .runtime/state.sqlite-wal
    ```
 
 2. **Check key status in admin**:
+
    ```bash
    curl http://localhost:8000/admin/keys \
      -H "Authorization: Bearer test-admin-token"
    ```
 
 3. **Manually enable keys**:
+
    ```bash
    curl -X POST http://localhost:8000/admin/keys/your-key-name/enable \
      -H "Authorization: Bearer test-admin-token"
@@ -1548,15 +1598,17 @@ rm .runtime/state.sqlite-wal
 **High Latency**
 
 1. **Check upstream latency**:
+
    ```bash
    curl http://localhost:8000/admin/metrics | grep upstream_duration
    ```
 
 2. **Increase timeout**:
+
    ```yaml
    # proxy.yaml
    proxy:
-     requestTimeoutMs: 30000  # Increase from 10000
+     requestTimeoutMs: 30000 # Increase from 10000
    ```
 
 3. **Add more keys**:
@@ -1566,12 +1618,14 @@ rm .runtime/state.sqlite-wal
 **Memory Leaks**
 
 1. **Monitor memory usage**:
+
    ```bash
    # Check process memory
    ps aux | grep bun
    ```
 
 2. **Restart server periodically**:
+
    ```bash
    # Add to cron (restart daily at 3am)
    0 3 * * * systemctl restart gemini-proxy
@@ -1648,10 +1702,11 @@ ab -n 1000 -c 10 -T 'application/json' \
 ```
 
 Sample `request.json`:
+
 ```json
 {
   "model": "gemini-2.5-flash",
-  "messages": [{"role": "user", "content": "Hello"}]
+  "messages": [{ "role": "user", "content": "Hello" }]
 }
 ```
 
@@ -1660,14 +1715,14 @@ Sample `request.json`:
 ```yaml
 # proxy.yaml
 proxy:
-  requestTimeoutMs: 15000        # 15s timeout
-  maxPayloadBytes: 5242880       # 5MB limit (reduce for faster)
+  requestTimeoutMs: 15000 # 15s timeout
+  maxPayloadBytes: 5242880 # 5MB limit (reduce for faster)
 
 monitoring:
-  healthCheckIntervalSeconds: 10  # Check health every 10s
-  failureThreshold: 2             # Fast failover
-  recoveryTimeSeconds: 60         # Quick recovery
-  windowSeconds: 60               # Short window for fast adaptation
+  healthCheckIntervalSeconds: 10 # Check health every 10s
+  failureThreshold: 2 # Fast failover
+  recoveryTimeSeconds: 60 # Quick recovery
+  windowSeconds: 60 # Short window for fast adaptation
 
 # keys.yaml
 keys:
@@ -1689,23 +1744,25 @@ keys:
 ```yaml
 # proxy.yaml
 proxy:
-  requestTimeoutMs: 30000        # 30s timeout (tolerate slow responses)
+  requestTimeoutMs: 30000 # 30s timeout (tolerate slow responses)
 
 monitoring:
-  healthCheckIntervalSeconds: 30  # Less frequent checks
-  failureThreshold: 5             # Tolerate transient errors
-  recoveryTimeSeconds: 300        # Conservative recovery
-  windowSeconds: 600              # Long window for stability
+  healthCheckIntervalSeconds: 30 # Less frequent checks
+  failureThreshold: 5 # Tolerate transient errors
+  recoveryTimeSeconds: 300 # Conservative recovery
+  windowSeconds: 600 # Long window for stability
 ```
 
 ### Resource Limits
 
 **Memory Usage**:
+
 - Baseline: ~50-100MB
 - Per concurrent request: ~1-5MB
 - SQLite database: ~1-10MB
 
 **CPU Usage**:
+
 - Mostly I/O bound
 - Minimal CPU for JSON parsing/streaming
 - Use multiple instances for CPU-heavy workloads
@@ -1733,6 +1790,7 @@ upstream gemini_cluster {
 ### Prometheus Metrics
 
 **Request Metrics**:
+
 ```
 proxy_requests_total{endpoint,status}           # Total requests
 proxy_request_duration_seconds{endpoint}        # Request latency
@@ -1740,6 +1798,7 @@ proxy_active_requests{endpoint}                 # Active requests
 ```
 
 **Key Health Metrics**:
+
 ```
 proxy_key_health{key_name}                      # Key health score (0-1)
 proxy_key_requests_total{key_name,result}       # Per-key request count
@@ -1751,12 +1810,12 @@ proxy_upstream_duration_seconds{endpoint}       # Upstream latency
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'gemini-proxy'
+  - job_name: "gemini-proxy"
     static_configs:
-      - targets: ['localhost:8000']
-    metrics_path: '/admin/metrics'
+      - targets: ["localhost:8000"]
+    metrics_path: "/admin/metrics"
     authorization:
-      credentials: 'test-admin-token'
+      credentials: "test-admin-token"
 ```
 
 ### Grafana Dashboard

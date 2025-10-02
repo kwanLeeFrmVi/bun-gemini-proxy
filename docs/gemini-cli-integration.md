@@ -1,4 +1,3 @@
-
 # Achieving 150 RPM with Free Tier - Study Guide
 
 ## Overview
@@ -9,9 +8,9 @@ This guide demonstrates achieving 150 requests per minute (RPM) on Gemini API us
 
 The primary goal of the `/gemini-cli` route is to bridge the gap between the `gemini` CLI and the broader ecosystem of tools that support the OpenAI API. By exposing the `gemini` CLI's functionality through a familiar API, this feature allows you to:
 
-*   Integrate the `gemini` CLI into your existing workflows and applications without modification.
-*   Leverage the power of the Gemini model through a simple and consistent interface.
-*   Utilize OpenAI-compatible clients to interact with the `gemini` CLI, enhancing your development experience.
+- Integrate the `gemini` CLI into your existing workflows and applications without modification.
+- Leverage the power of the Gemini model through a simple and consistent interface.
+- Utilize OpenAI-compatible clients to interact with the `gemini` CLI, enhancing your development experience.
 
 ## API Endpoints
 
@@ -126,16 +125,30 @@ curl http://localhost:8000/gemini-cli/v1/health
 
 The `/gemini-cli` route supports the following models:
 
-*   `gemini-2.5-pro`
-*   `gemini-2.5-flash`
-*   `gemini-2.0-flash-exp`
-*   `gemini-exp-1206`
+- `gemini-2.5-pro`
+- `gemini-2.5-flash`
+- `gemini-2.0-flash-exp`
+- `gemini-exp-1206`
 
 ## Limitations
 
-*   **Streaming Not Supported:** The `gemini` CLI backend does not support streaming responses. Therefore, requests with `stream=true` will be rejected.
-*   **Image Input Not Supported:** The current integration does not support image inputs.
+- **Streaming Not Supported:** The `gemini` CLI backend does not support streaming responses. Therefore, requests with `stream=true` will be rejected.
+- **Image Input Not Supported:** The current integration does not support image inputs.
 
 ## Client Configuration
 
 To use the `/gemini-cli` route with an OpenAI-compatible client, you need to configure the client to use the proxy server's address as the API endpoint. For example, if the proxy is running on `http://localhost:8000`, you would set the client's base URL to `http://localhost:8000/gemini-cli`.
+
+## Client Usage Tracking
+
+The proxy server tracks usage metrics for each access token. You can view the client leaderboard by visiting the `/info` endpoint, which shows:
+
+- **Masked Client Tokens**: First 5 characters followed by `******` for security
+- **Request Counts**: Last 1 minute, 24 hours, and 7 days
+- **Success Rates**: Percentage of successful requests
+
+The leaderboard is sorted by total request count (descending), making it easy to identify which clients are using the proxy most actively. This is particularly useful for:
+
+- **Academic assignments**: Demonstrating distributed load across multiple access tokens
+- **Monitoring usage**: Tracking which applications or users are consuming the most API quota
+- **Debugging**: Identifying problematic clients with low success rates

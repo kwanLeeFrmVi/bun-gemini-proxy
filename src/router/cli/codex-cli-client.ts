@@ -28,21 +28,20 @@ export class CodexCLIClient {
    * Execute codex CLI command and stream output line-by-line
    * Yields agent messages as they arrive
    */
-  async *executeStreaming(options: CodexCLIExecutionOptions): AsyncGenerator<string, void, unknown> {
-    const {
-      prompt,
-      model,
-      reasoningEffort,
-      images,
-      workingDir,
-    } = options;
+  async *executeStreaming(
+    options: CodexCLIExecutionOptions,
+  ): AsyncGenerator<string, void, unknown> {
+    const { prompt, model, reasoningEffort, images, workingDir } = options;
 
-    logger.info({
-      model,
-      reasoningEffort,
-      promptLength: prompt.length,
-      imageCount: images?.length || 0
-    }, "Executing codex CLI command (streaming)");
+    logger.info(
+      {
+        model,
+        reasoningEffort,
+        promptLength: prompt.length,
+        imageCount: images?.length || 0,
+      },
+      "Executing codex CLI command (streaming)",
+    );
 
     // Build command with config overrides and experimental JSON output
     const args: string[] = [];
@@ -122,12 +121,15 @@ export class CodexCLIClient {
       workingDir,
     } = options;
 
-    logger.info({
-      model,
-      reasoningEffort,
-      promptLength: prompt.length,
-      imageCount: images?.length || 0
-    }, "Executing codex CLI command");
+    logger.info(
+      {
+        model,
+        reasoningEffort,
+        promptLength: prompt.length,
+        imageCount: images?.length || 0,
+      },
+      "Executing codex CLI command",
+    );
 
     try {
       // Build command with config overrides and experimental JSON output
@@ -164,10 +166,10 @@ export class CodexCLIClient {
       // Execute with timeout
       const command = $`codex ${args}`.quiet();
 
-      const result = await Promise.race([
+      const result = (await Promise.race([
         command.text(),
         this.createTimeout(timeoutMs),
-      ]) as string;
+      ])) as string;
 
       // Parse JSON response
       const parsed = this.parseOutput(result);

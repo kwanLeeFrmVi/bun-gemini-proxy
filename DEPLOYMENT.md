@@ -58,9 +58,9 @@ Update `ecosystem.config.js` and `scripts/deploy.sh` with your server details:
 
 ```javascript
 // In scripts/deploy.sh
-SSH_HOST="your-ssh-alias"  // From ~/.ssh/config
-REMOTE_PATH="/home/user/bun-gemini-proxy"
-BINARY_NAME="bun-gemini-proxy-linux-arm64-glibc"  // Or x64 variant
+SSH_HOST = "your-ssh-alias"; // From ~/.ssh/config
+REMOTE_PATH = "/home/user/bun-gemini-proxy";
+BINARY_NAME = "bun-gemini-proxy-linux-arm64-glibc"; // Or x64 variant
 ```
 
 ## Configuration Files
@@ -68,12 +68,14 @@ BINARY_NAME="bun-gemini-proxy-linux-arm64-glibc"  // Or x64 variant
 ### Required Files
 
 1. **proxy.yaml** - Server configuration
+
    ```bash
    cp proxy.example.yaml proxy.yaml
    # Edit: port, timeout, rate limits, etc.
    ```
 
 2. **keys.yaml** - Gemini API keys
+
    ```bash
    cp keys.example.yaml keys.yaml
    # Add your Gemini API keys

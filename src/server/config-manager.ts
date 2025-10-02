@@ -18,7 +18,8 @@ const DEFAULT_PROXY_CONFIG: ProxyConfig = {
   maxPayloadSizeBytes: 10 * 1024 * 1024,
   adminToken: process.env.PROXY_ADMIN_TOKEN ?? "test-admin-token",
   requestTimeoutMs: 10_000,
-  upstreamBaseUrl: process.env.GEMINI_UPSTREAM_BASE_URL ?? "https://generativelanguage.googleapis.com",
+  upstreamBaseUrl:
+    process.env.GEMINI_UPSTREAM_BASE_URL ?? "https://generativelanguage.googleapis.com",
   accessTokens: [],
   requireAuth: false,
 };
@@ -53,12 +54,12 @@ export class ConfigManager {
     this.proxyPath = this.resolveConfigPath(
       options.proxyPath,
       process.env.PROXY_CONFIG_PATH,
-      "proxy.yaml"
+      "proxy.yaml",
     );
     this.keysPath = this.resolveConfigPath(
       options.keysPath,
       process.env.KEYS_CONFIG_PATH,
-      "keys.yaml"
+      "keys.yaml",
     );
 
     logger.info({ proxyPath: this.proxyPath, keysPath: this.keysPath }, "Config paths resolved");
@@ -70,7 +71,7 @@ export class ConfigManager {
   private resolveConfigPath(
     cliOption: string | undefined,
     envVar: string | undefined,
-    filename: string
+    filename: string,
   ): string {
     if (cliOption) {
       return resolve(cliOption);

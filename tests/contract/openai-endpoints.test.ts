@@ -429,7 +429,7 @@ describe("OpenAI Endpoints: Authentication", () => {
       withTimeout({
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          Authorization: `Bearer ${AUTH_TOKEN}`,
         },
       }),
     );
@@ -445,7 +445,7 @@ describe("OpenAI Endpoints: Authentication", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer invalid-token-xyz",
+          Authorization: "Bearer invalid-token-xyz",
         },
         body: JSON.stringify({
           model: "gemini-1.5-pro",

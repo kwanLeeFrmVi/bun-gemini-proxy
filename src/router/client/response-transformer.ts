@@ -45,60 +45,162 @@ export class ResponseTransformer {
 
   private readonly modelMetadata: Map<string, ModelMetadata> = new Map([
     // Gemini 2.5 models - all support thinking/reasoning
-    ["gemini-2.5-pro", {
-      context_length: 1048576,
-      max_completion_tokens: 65536,
-      supported_parameters: ["include_reasoning", "max_tokens", "reasoning", "response_format", "seed", "stop", "temperature", "tool_choice", "tools", "top_p", "stream"],
-      capabilities: { vision: true, function_calling: true, reasoning: true }
-    }],
-    ["gemini-2.5-flash", {
-      context_length: 1048576,
-      max_completion_tokens: 65536,
-      supported_parameters: ["include_reasoning", "max_tokens", "reasoning", "response_format", "seed", "stop", "temperature", "tool_choice", "tools", "top_p", "stream"],
-      capabilities: { vision: true, function_calling: true, reasoning: true }
-    }],
+    [
+      "gemini-2.5-pro",
+      {
+        context_length: 1048576,
+        max_completion_tokens: 65536,
+        supported_parameters: [
+          "include_reasoning",
+          "max_tokens",
+          "reasoning",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { vision: true, function_calling: true, reasoning: true },
+      },
+    ],
+    [
+      "gemini-2.5-flash",
+      {
+        context_length: 1048576,
+        max_completion_tokens: 65536,
+        supported_parameters: [
+          "include_reasoning",
+          "max_tokens",
+          "reasoning",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { vision: true, function_calling: true, reasoning: true },
+      },
+    ],
 
     // Gemini 2.0 thinking models
-    ["gemini-2.0-flash-thinking-exp", {
-      context_length: 32768,
-      max_completion_tokens: 8192,
-      supported_parameters: ["include_reasoning", "max_tokens", "reasoning", "temperature", "top_p", "stream"],
-      capabilities: { reasoning: true }
-    }],
-    ["gemini-2.0-flash-thinking-exp-01-21", {
-      context_length: 32768,
-      max_completion_tokens: 8192,
-      supported_parameters: ["include_reasoning", "max_tokens", "reasoning", "temperature", "top_p", "stream"],
-      capabilities: { reasoning: true }
-    }],
+    [
+      "gemini-2.0-flash-thinking-exp",
+      {
+        context_length: 32768,
+        max_completion_tokens: 8192,
+        supported_parameters: [
+          "include_reasoning",
+          "max_tokens",
+          "reasoning",
+          "temperature",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { reasoning: true },
+      },
+    ],
+    [
+      "gemini-2.0-flash-thinking-exp-01-21",
+      {
+        context_length: 32768,
+        max_completion_tokens: 8192,
+        supported_parameters: [
+          "include_reasoning",
+          "max_tokens",
+          "reasoning",
+          "temperature",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { reasoning: true },
+      },
+    ],
 
     // Gemini 2.0 standard models
-    ["gemini-2.0-flash-exp", {
-      context_length: 1048576,
-      max_completion_tokens: 8192,
-      supported_parameters: ["max_tokens", "response_format", "seed", "stop", "temperature", "tool_choice", "tools", "top_p", "stream"],
-      capabilities: { vision: true, function_calling: true }
-    }],
-    ["gemini-2.0-flash", {
-      context_length: 1048576,
-      max_completion_tokens: 8192,
-      supported_parameters: ["max_tokens", "response_format", "seed", "stop", "temperature", "tool_choice", "tools", "top_p", "stream"],
-      capabilities: { vision: true, function_calling: true }
-    }],
+    [
+      "gemini-2.0-flash-exp",
+      {
+        context_length: 1048576,
+        max_completion_tokens: 8192,
+        supported_parameters: [
+          "max_tokens",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { vision: true, function_calling: true },
+      },
+    ],
+    [
+      "gemini-2.0-flash",
+      {
+        context_length: 1048576,
+        max_completion_tokens: 8192,
+        supported_parameters: [
+          "max_tokens",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { vision: true, function_calling: true },
+      },
+    ],
 
     // Gemini 1.5 models
-    ["gemini-1.5-pro", {
-      context_length: 2097152,
-      max_completion_tokens: 8192,
-      supported_parameters: ["max_tokens", "response_format", "seed", "stop", "temperature", "tool_choice", "tools", "top_p", "stream"],
-      capabilities: { vision: true, function_calling: true }
-    }],
-    ["gemini-1.5-flash", {
-      context_length: 1048576,
-      max_completion_tokens: 8192,
-      supported_parameters: ["max_tokens", "response_format", "seed", "stop", "temperature", "tool_choice", "tools", "top_p", "stream"],
-      capabilities: { vision: true, function_calling: true }
-    }],
+    [
+      "gemini-1.5-pro",
+      {
+        context_length: 2097152,
+        max_completion_tokens: 8192,
+        supported_parameters: [
+          "max_tokens",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { vision: true, function_calling: true },
+      },
+    ],
+    [
+      "gemini-1.5-flash",
+      {
+        context_length: 1048576,
+        max_completion_tokens: 8192,
+        supported_parameters: [
+          "max_tokens",
+          "response_format",
+          "seed",
+          "stop",
+          "temperature",
+          "tool_choice",
+          "tools",
+          "top_p",
+          "stream",
+        ],
+        capabilities: { vision: true, function_calling: true },
+      },
+    ],
   ]);
 
   /**
@@ -117,7 +219,7 @@ export class ResponseTransformer {
         return;
       }
 
-      const data = await response.json() as { data?: OpenRouterModel[] };
+      const data = (await response.json()) as { data?: OpenRouterModel[] };
       if (!data.data) {
         return;
       }
@@ -148,10 +250,7 @@ export class ResponseTransformer {
    */
   private async getModelMetadata(modelId: string): Promise<ModelMetadata> {
     // Refresh OpenRouter cache if needed
-    if (
-      !this.openRouterCache ||
-      Date.now() - this.openRouterCache.timestamp > this.CACHE_TTL_MS
-    ) {
+    if (!this.openRouterCache || Date.now() - this.openRouterCache.timestamp > this.CACHE_TTL_MS) {
       await this.fetchOpenRouterMetadata();
     }
 
@@ -174,14 +273,19 @@ export class ResponseTransformer {
     // Merge OpenRouter data with local metadata
     if (openRouterModel) {
       const hasVision = openRouterModel.architecture?.input_modalities?.includes("image") ?? false;
-      const hasReasoning = openRouterModel.supported_parameters?.some(p =>
-        p === "include_reasoning" || p === "reasoning"
-      ) ?? false;
+      const hasReasoning =
+        openRouterModel.supported_parameters?.some(
+          (p) => p === "include_reasoning" || p === "reasoning",
+        ) ?? false;
 
       return {
         context_length: openRouterModel.context_length ?? localMetadata?.context_length ?? 32768,
-        max_completion_tokens: openRouterModel.top_provider?.max_completion_tokens ?? localMetadata?.max_completion_tokens ?? 8192,
-        supported_parameters: openRouterModel.supported_parameters ?? localMetadata?.supported_parameters ?? ["max_tokens", "temperature", "top_p", "stream"],
+        max_completion_tokens:
+          openRouterModel.top_provider?.max_completion_tokens ??
+          localMetadata?.max_completion_tokens ??
+          8192,
+        supported_parameters: openRouterModel.supported_parameters ??
+          localMetadata?.supported_parameters ?? ["max_tokens", "temperature", "top_p", "stream"],
         capabilities: {
           vision: hasVision,
           function_calling: localMetadata?.capabilities?.function_calling ?? false,
@@ -206,7 +310,9 @@ export class ResponseTransformer {
   /**
    * Transform Gemini model list response to OpenAI format with enriched metadata.
    */
-  async transformModelList(geminiResponse: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async transformModelList(
+    geminiResponse: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
     const models = (geminiResponse.models as Array<{ name: string }> | undefined) ?? [];
 
     const enrichedModels = await Promise.all(
@@ -225,7 +331,7 @@ export class ResponseTransformer {
           capabilities: metadata.capabilities,
           pricing: metadata.pricing,
         };
-      })
+      }),
     );
 
     return {

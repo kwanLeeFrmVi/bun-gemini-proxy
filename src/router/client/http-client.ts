@@ -125,7 +125,9 @@ export class HttpClient {
   /**
    * Parse response and handle content types.
    */
-  private async parseResponse(response: Response): Promise<UpstreamResult<Record<string, unknown>>> {
+  private async parseResponse(
+    response: Response,
+  ): Promise<UpstreamResult<Record<string, unknown>>> {
     const headers = response.headers;
     const contentType = headers.get("content-type") ?? "";
     const body = contentType.includes("application/json")

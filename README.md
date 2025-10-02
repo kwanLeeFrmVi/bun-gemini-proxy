@@ -20,12 +20,14 @@ bunx github:YOUR_USERNAME/bun-gemini-proxy
 The proxy will automatically read `proxy.yaml` and `keys.yaml` from your current directory.
 
 When the server starts, you'll see:
+
 ```
 🚀 Gemini Proxy Server is running!
 📖 Open user guide: http://0.0.0.0:8000/help
 ```
 
 **Open http://localhost:8000/help in your browser** for comprehensive documentation including:
+
 - API endpoints and usage
 - SDK integration examples (JavaScript, Python, Go, Ruby)
 - Configuration reference

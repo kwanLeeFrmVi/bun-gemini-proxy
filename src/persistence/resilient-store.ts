@@ -1,11 +1,11 @@
 import { logger } from "../observability/logger.ts";
-import type {
-  PersistedState,
-  StateStore,
-} from "./state-store.ts";
+import type { PersistedState, StateStore } from "./types.ts";
 
 export class ResilientStateStore implements StateStore {
-  constructor(private primary: StateStore, private fallback: StateStore) {}
+  constructor(
+    private primary: StateStore,
+    private fallback: StateStore,
+  ) {}
 
   init(): void {
     try {
@@ -71,6 +71,37 @@ export class ResilientStateStore implements StateStore {
     } catch (error) {
       logger.error({ error }, "Primary persistence weekly stats failed; using fallback");
       return this.fallback.getWeeklyUsageStats();
+    }
+  }
+
+  recordClientMetrics(...args: Parameters<StateStore["recordClientMetrics"]>): void {
+    try {
+      this.primary.recordClientMetrics(...args);
+    } catch (error) {
+      logger.error(
+        { error },
+        "Primary persistence client metrics write failed; delegating to fallback",
+      );
+      this.fallback.recordClientMetrics(...args);
+      this.primary = this.fallback;
+    }
+  }
+
+  getClientDailyStats(): ReturnType<StateStore["getClientDailyStats"]> {
+    try {
+      return this.primary.getClientDailyStats();
+    } catch (error) {
+      logger.error({ error }, "Primary persistence client daily stats failed; using fallback");
+      return this.fallback.getClientDailyStats();
+    }
+  }
+
+  getClientWeeklyStats(): ReturnType<StateStore["getClientWeeklyStats"]> {
+    try {
+      return this.primary.getClientWeeklyStats();
+    } catch (error) {
+      logger.error({ error }, "Primary persistence client weekly stats failed; using fallback");
+      return this.fallback.getClientWeeklyStats();
     }
   }
 }

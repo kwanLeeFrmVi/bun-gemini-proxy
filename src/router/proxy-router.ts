@@ -1,7 +1,8 @@
 import type { ProxyConfig } from "../types/config.ts";
 import type { KeyManager } from "../keys/key-manager.ts";
 import type { GeminiClient } from "./gemini-client.ts";
-import type { StateStore } from "../persistence/state-store.ts";
+import type { StateStore } from "../persistence/types.ts";
+import type { ClientMetricsSnapshot } from "../types/key.ts";
 import { activeRequestsGauge, requestCounter, requestDuration } from "../observability/metrics.ts";
 import { errorResponse, jsonResponse } from "./responses.ts";
 import { logger } from "../observability/logger.ts";
@@ -26,6 +27,11 @@ export class ProxyRouter {
   private readonly stateStore: StateStore;
   private readonly helpView: HelpView;
   private readonly infoView: InfoView;
+  private readonly clientMetrics: Map<
+    string,
+    { requests: number; success: number; errors: number }
+  > = new Map();
+  private metricsFlushInterval: Timer;
 
   constructor(options: ProxyRouterOptions) {
     this.config = options.config;
@@ -38,6 +44,44 @@ export class ProxyRouter {
       keyManager: this.keyManager,
       stateStore: this.stateStore,
     });
+
+    // Flush client metrics every 10 seconds
+    this.metricsFlushInterval = setInterval(() => {
+      this.flushClientMetrics();
+    }, 10_000);
+  }
+
+  private maskToken(token: string): string {
+    return `${token.slice(0, 5)}******`;
+  }
+
+  private trackClientRequest(clientId: string, success: boolean): void {
+    const existing = this.clientMetrics.get(clientId) ?? { requests: 0, success: 0, errors: 0 };
+    existing.requests += 1;
+    if (success) {
+      existing.success += 1;
+    } else {
+      existing.errors += 1;
+    }
+    this.clientMetrics.set(clientId, existing);
+  }
+
+  private flushClientMetrics(): void {
+    if (this.clientMetrics.size === 0) return;
+
+    const timestamp = new Date();
+    for (const [clientId, stats] of this.clientMetrics.entries()) {
+      const snapshot: ClientMetricsSnapshot = {
+        clientId,
+        timestamp,
+        requestCount: stats.requests,
+        successCount: stats.success,
+        errorCount: stats.errors,
+      };
+      this.stateStore.recordClientMetrics(snapshot);
+    }
+
+    this.clientMetrics.clear();
   }
 
   async handle(request: Request): Promise<Response> {
@@ -55,16 +99,32 @@ export class ProxyRouter {
       return errorResponse("Not found", 404, "not_found");
     }
 
+    // Extract and mask client token for metrics tracking
+    let maskedClientId: string | null = null;
+    const authHeader = request.headers.get("authorization");
+    if (authHeader) {
+      const token = authHeader.replace(/^Bearer\s+/i, "");
+      maskedClientId = this.maskToken(token);
+    } else if (this.config.accessTokens.length === 0 || !this.config.requireAuth) {
+      // No auth required - use special identifier
+      maskedClientId = "no-auth";
+    }
+
     // Authentication check for /v1 endpoints
     // Skip authentication if no accessTokens configured
     if (this.config.accessTokens.length > 0 && this.config.requireAuth) {
-      const authHeader = request.headers.get("authorization");
       if (!authHeader) {
+        if (maskedClientId) {
+          this.trackClientRequest(maskedClientId, false);
+        }
         return errorResponse("Missing authorization header", 401, "authentication_error");
       }
 
       const token = authHeader.replace(/^Bearer\s+/i, "");
       if (!this.config.accessTokens.includes(token)) {
+        if (maskedClientId) {
+          this.trackClientRequest(maskedClientId, false);
+        }
         return errorResponse("Invalid access token", 401, "authentication_error");
       }
     }
@@ -85,7 +145,7 @@ export class ProxyRouter {
     }
 
     if (url.pathname === "/v1/chat/completions" && request.method === "POST") {
-      return this.handleChatCompletions(request);
+      return this.handleChatCompletions(request, maskedClientId);
     }
 
     if (url.pathname === "/v1/embeddings" && request.method === "POST") {
@@ -155,7 +215,10 @@ export class ProxyRouter {
     }
   }
 
-  private async handleChatCompletions(request: Request): Promise<Response> {
+  private async handleChatCompletions(
+    request: Request,
+    maskedClientId: string | null,
+  ): Promise<Response> {
     const endpoint = "/v1/chat/completions";
     const endTimer = this.startRequestTimer(endpoint, request.method);
     activeRequestsGauge.inc({ endpoint });
@@ -188,18 +251,27 @@ export class ProxyRouter {
       } catch {
         requestCounter.inc({ endpoint, method: request.method, status: 400, result: "rejected" });
         resultLabel = "rejected";
+        if (maskedClientId) {
+          this.trackClientRequest(maskedClientId, false);
+        }
         return errorResponse("Malformed JSON payload", 400, "invalid_request_error");
       }
 
       if (!body.model || typeof body.model !== "string") {
         requestCounter.inc({ endpoint, method: request.method, status: 400, result: "rejected" });
         resultLabel = "rejected";
+        if (maskedClientId) {
+          this.trackClientRequest(maskedClientId, false);
+        }
         return errorResponse("Missing required 'model' field", 400, "invalid_request_error");
       }
 
       if (!Array.isArray(body.messages)) {
         requestCounter.inc({ endpoint, method: request.method, status: 400, result: "rejected" });
         resultLabel = "rejected";
+        if (maskedClientId) {
+          this.trackClientRequest(maskedClientId, false);
+        }
         return errorResponse("Missing required 'messages' array", 400, "invalid_request_error");
       }
 
@@ -217,8 +289,12 @@ export class ProxyRouter {
         if (!google.thinking_config) {
           google.thinking_config = thinkingConfig;
           logger.debug(
-            { model: body.model, reasoning_effort: body.reasoning_effort, thinking_budget: thinkingConfig.thinking_budget },
-            "Converted reasoning_effort to thinking_budget"
+            {
+              model: body.model,
+              reasoning_effort: body.reasoning_effort,
+              thinking_budget: thinkingConfig.thinking_budget,
+            },
+            "Converted reasoning_effort to thinking_budget",
           );
         }
 
@@ -235,6 +311,9 @@ export class ProxyRouter {
         if (!selection) {
           requestCounter.inc({ endpoint, method: request.method, status: 503, result: "failed" });
           resultLabel = "failed";
+          if (maskedClientId) {
+            this.trackClientRequest(maskedClientId, false);
+          }
           return errorResponse("No healthy API keys available", 503, "service_unavailable");
         }
         if (attemptedKeys.has(selection.record.id)) {
@@ -251,6 +330,9 @@ export class ProxyRouter {
           this.keyManager.recordSuccess(selection.record.id, elapsed * 1000);
           requestCounter.inc({ endpoint, method: request.method, status: 200, result: "success" });
           resultLabel = "success";
+          if (maskedClientId) {
+            this.trackClientRequest(maskedClientId, true);
+          }
 
           // Remove compression headers to ensure OpenAI clients can read the stream
           const headers = new Headers(upstream.headers);
@@ -268,7 +350,7 @@ export class ProxyRouter {
                   .replace(/<\/thought>/g, "</think>");
                 controller.enqueue(new TextEncoder().encode(transformed));
               },
-            })
+            }),
           );
 
           return new Response(transformedStream, {
@@ -282,6 +364,9 @@ export class ProxyRouter {
           this.keyManager.recordSuccess(selection.record.id, elapsed * 1000);
           requestCounter.inc({ endpoint, method: request.method, status: 200, result: "success" });
           resultLabel = "success";
+          if (maskedClientId) {
+            this.trackClientRequest(maskedClientId, true);
+          }
 
           // Transform <thought> to <think> in non-streaming responses
           const transformedBody = this.transformThinkingTags(upstream.body);
@@ -314,10 +399,16 @@ export class ProxyRouter {
           result: "failed",
         });
         resultLabel = "failed";
+        if (maskedClientId) {
+          this.trackClientRequest(maskedClientId, false);
+        }
         return lastFailure;
       }
 
       requestCounter.inc({ endpoint, method: request.method, status: 503, result: "failed" });
+      if (maskedClientId) {
+        this.trackClientRequest(maskedClientId, false);
+      }
       resultLabel = "failed";
       return errorResponse("All keys exhausted", 503, "service_unavailable");
     } finally {

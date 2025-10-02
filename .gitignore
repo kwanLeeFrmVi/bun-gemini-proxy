@@ -36,7 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # secret keys and runtime config
 keys.yaml
 proxy.yaml
-.runtime/
+.runtime/*
 Deployment-PRD.md
 bin/*
 scripts/deploy.sh

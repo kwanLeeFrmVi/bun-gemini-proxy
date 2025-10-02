@@ -5,6 +5,8 @@ import type {
   ApiKeyRecord,
   CircuitBreakerState,
   CircuitState,
+  ClientMetricsSnapshot,
+  ClientUsageStats,
   HealthScoreState,
   RequestMetricsSnapshot,
 } from "../types/key.ts";
@@ -74,6 +76,18 @@ export class SQLiteStateStore implements StateStore {
         p95_latency REAL DEFAULT 0,
         FOREIGN KEY (key_id) REFERENCES api_keys(id)
       );
+
+      CREATE TABLE IF NOT EXISTS client_metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id TEXT NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        request_count INTEGER DEFAULT 0,
+        success_count INTEGER DEFAULT 0,
+        error_count INTEGER DEFAULT 0
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_client_timestamp
+        ON client_metrics(client_id, timestamp);
     `);
   }
 
@@ -125,8 +139,12 @@ export class SQLiteStateStore implements StateStore {
             keyId: row.key_id as string,
             state: row.state as CircuitState,
             failureCount: Number(row.failure_count ?? 0),
-            lastFailureTime: row.last_failure_time ? new Date(row.last_failure_time as string) : null,
-            nextAttemptTime: row.next_attempt_time ? new Date(row.next_attempt_time as string) : null,
+            lastFailureTime: row.last_failure_time
+              ? new Date(row.last_failure_time as string)
+              : null,
+            nextAttemptTime: row.next_attempt_time
+              ? new Date(row.next_attempt_time as string)
+              : null,
             openedAt: row.opened_at ? new Date(row.opened_at as string) : null,
           }) satisfies CircuitBreakerState,
       );
@@ -149,7 +167,7 @@ export class SQLiteStateStore implements StateStore {
           }) satisfies RequestMetricsSnapshot,
       );
 
-    return { keys, health, circuits, metrics };
+    return { keys, health, circuits, metrics, clientMetrics: [] };
   }
 
   save(state: PersistedState): void {
@@ -313,6 +331,72 @@ export class SQLiteStateStore implements StateStore {
         successRate,
         avgLatencyMs: Number(row.avg_latency ?? 0),
       } satisfies UsageStats;
+    });
+  }
+
+  recordClientMetrics(snapshot: ClientMetricsSnapshot): void {
+    const insertMetrics = this.db.prepare(
+      `INSERT INTO client_metrics (client_id, timestamp, request_count, success_count, error_count)
+       VALUES (?1, ?2, ?3, ?4, ?5);
+      `,
+    );
+
+    insertMetrics.run(
+      snapshot.clientId,
+      snapshot.timestamp.toISOString(),
+      snapshot.requestCount,
+      snapshot.successCount,
+      snapshot.errorCount,
+    );
+  }
+
+  getClientDailyStats(): ClientUsageStats[] {
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const minuteAgo = new Date(Date.now() - 60 * 1000);
+    return this.getClientStatsAfter(dayAgo, minuteAgo);
+  }
+
+  getClientWeeklyStats(): ClientUsageStats[] {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const minuteAgo = new Date(Date.now() - 60 * 1000);
+    return this.getClientStatsAfter(weekAgo, minuteAgo);
+  }
+
+  private getClientStatsAfter(since: Date, minuteSince: Date): ClientUsageStats[] {
+    const results = this.db
+      .query(
+        `SELECT
+          client_id,
+          SUM(request_count) as total_requests,
+          SUM(success_count) as success_count,
+          SUM(error_count) as error_count,
+          SUM(CASE WHEN timestamp >= ?2 THEN request_count ELSE 0 END) as minute_requests
+        FROM client_metrics
+        WHERE timestamp >= ?1
+        GROUP BY client_id
+        ORDER BY total_requests DESC`,
+      )
+      .all(since.toISOString(), minuteSince.toISOString()) as Array<{
+      client_id: string;
+      total_requests: number;
+      success_count: number;
+      error_count: number;
+      minute_requests: number;
+    }>;
+
+    return results.map((row) => {
+      const totalRequests = Number(row.total_requests ?? 0);
+      const successCount = Number(row.success_count ?? 0);
+      const successRate = totalRequests > 0 ? successCount / totalRequests : 0;
+
+      return {
+        clientId: row.client_id,
+        maskedToken: row.client_id, // Already masked
+        minuteRequests: Number(row.minute_requests ?? 0),
+        dailyRequests: totalRequests,
+        weeklyRequests: totalRequests,
+        successRate,
+      } satisfies ClientUsageStats;
     });
   }
 }

@@ -65,8 +65,12 @@ export class KeyManager {
     persisted.keys.forEach((key) => {
       persistedById.set(key.id, {
         record: key,
-        health: persisted.health.find((state) => state.keyId === key.id) ?? this.healthTracker.createDefault(key.id),
-        circuit: persisted.circuits.find((state) => state.keyId === key.id) ?? this.circuitBreaker.createDefault(key.id),
+        health:
+          persisted.health.find((state) => state.keyId === key.id) ??
+          this.healthTracker.createDefault(key.id),
+        circuit:
+          persisted.circuits.find((state) => state.keyId === key.id) ??
+          this.circuitBreaker.createDefault(key.id),
       });
     });
 
@@ -104,7 +108,12 @@ export class KeyManager {
         this.keys.delete(id);
         logger.info({ keyId: id }, "Removed key no longer present in configuration");
       } else {
-        observeKeyHealth(id, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+        observeKeyHealth(
+          id,
+          state.record.name,
+          state.health.score,
+          CIRCUIT_STATE_VALUE[state.circuit.state],
+        );
       }
     });
   }
@@ -148,22 +157,32 @@ export class KeyManager {
       const evaluatedCircuit = this.circuitBreaker.evaluate(state.circuit);
       if (evaluatedCircuit !== state.circuit) {
         state.circuit = evaluatedCircuit;
-        observeKeyHealth(state.record.id, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+        observeKeyHealth(
+          state.record.id,
+          state.record.name,
+          state.health.score,
+          CIRCUIT_STATE_VALUE[state.circuit.state],
+        );
         this.persistState(state.record.id);
       }
 
       // Check eligibility with cooldown enforcement
-      if (this.selector.isEligible(
-        state.record.isActive,
-        state.circuit.state,
-        state.record.lastUsedAt,
-        state.record.cooldownSeconds,
-      ) || isMockMode) {
+      if (
+        this.selector.isEligible(
+          state.record.isActive,
+          state.circuit.state,
+          state.record.lastUsedAt,
+          state.record.cooldownSeconds,
+        ) ||
+        isMockMode
+      ) {
         candidates.push(state);
       }
     });
 
-    const selected = this.selector.select(candidates.map((s) => ({ record: s.record, circuit: s.circuit })));
+    const selected = this.selector.select(
+      candidates.map((s) => ({ record: s.record, circuit: s.circuit })),
+    );
     if (!selected) {
       return null;
     }
@@ -194,7 +213,12 @@ export class KeyManager {
     state.circuit = this.circuitBreaker.recordSuccess(state.circuit);
     state.record.lastUsedAt = now;
 
-    observeKeyHealth(keyId, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+    observeKeyHealth(
+      keyId,
+      state.record.name,
+      state.health.score,
+      CIRCUIT_STATE_VALUE[state.circuit.state],
+    );
     this.persistState(keyId);
     this.persistence.recordRequestMetrics({
       keyId,
@@ -221,7 +245,12 @@ export class KeyManager {
     state.circuit = this.circuitBreaker.recordFailure(state.circuit, reason, isRateLimit);
     state.record.lastUsedAt = now;
 
-    observeKeyHealth(keyId, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+    observeKeyHealth(
+      keyId,
+      state.record.name,
+      state.health.score,
+      CIRCUIT_STATE_VALUE[state.circuit.state],
+    );
     this.persistState(keyId);
     this.persistence.recordRequestMetrics({
       keyId,
@@ -246,7 +275,12 @@ export class KeyManager {
     const evaluated = this.circuitBreaker.evaluate(state.circuit);
     if (evaluated !== state.circuit) {
       state.circuit = evaluated;
-      observeKeyHealth(keyId, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+      observeKeyHealth(
+        keyId,
+        state.record.name,
+        state.health.score,
+        CIRCUIT_STATE_VALUE[state.circuit.state],
+      );
       this.persistState(keyId);
     }
   }
@@ -263,7 +297,12 @@ export class KeyManager {
     state.record.isActive = true;
     state.circuit = this.circuitBreaker.reset(state.circuit);
     state.health = this.healthTracker.createDefault(keyId);
-    observeKeyHealth(keyId, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+    observeKeyHealth(
+      keyId,
+      state.record.name,
+      state.health.score,
+      CIRCUIT_STATE_VALUE[state.circuit.state],
+    );
     this.persistState(keyId);
     return true;
   }
@@ -278,7 +317,12 @@ export class KeyManager {
     }
 
     state.record.isActive = false;
-    observeKeyHealth(keyId, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
+    observeKeyHealth(
+      keyId,
+      state.record.name,
+      state.health.score,
+      CIRCUIT_STATE_VALUE[state.circuit.state],
+    );
     this.persistState(keyId);
     return true;
   }
@@ -333,7 +377,10 @@ export class KeyManager {
   /**
    * Describe the human-readable status of a key.
    */
-  private describeStatus(record: ApiKeyRecord, circuit: { state: CircuitState }): KeyStatusSummary["status"] {
+  private describeStatus(
+    record: ApiKeyRecord,
+    circuit: { state: CircuitState },
+  ): KeyStatusSummary["status"] {
     if (!record.isActive) {
       return "disabled";
     }

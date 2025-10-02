@@ -55,3 +55,20 @@ export type KeySelectionResult = {
   circuit: CircuitBreakerState;
   health: HealthScoreState;
 };
+
+export interface ClientMetricsSnapshot {
+  clientId: string;
+  timestamp: Date;
+  requestCount: number;
+  successCount: number;
+  errorCount: number;
+}
+
+export interface ClientUsageStats {
+  clientId: string;
+  maskedToken: string;
+  minuteRequests: number;
+  dailyRequests: number;
+  weeklyRequests: number;
+  successRate: number;
+}

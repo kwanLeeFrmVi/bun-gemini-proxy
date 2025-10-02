@@ -52,10 +52,10 @@ export class GeminiCLIClient {
         : $`gemini ${prompt} --output-format json`.quiet();
 
       // Execute with timeout
-      const result = await Promise.race([
+      const result = (await Promise.race([
         command.text(),
         this.createTimeout(timeoutMs),
-      ]) as string;
+      ])) as string;
 
       // Parse JSON response
       const parsed = this.parseOutput(result);
@@ -101,7 +101,7 @@ export class GeminiCLIClient {
     // We need to find the JSON object at the end
 
     // Find the last occurrence of { that starts a JSON object
-    const jsonStartIndex = output.lastIndexOf('\n{');
+    const jsonStartIndex = output.lastIndexOf("\n{");
     if (jsonStartIndex === -1) {
       logger.error({ output: output.slice(0, 500) }, "No JSON object found in output");
       throw new Error("Invalid JSON output from gemini CLI");

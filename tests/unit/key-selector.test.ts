@@ -77,7 +77,10 @@ describe("KeySelector", () => {
   });
 
   describe("select", () => {
-    const createCandidate = (id: string, weight: number): { record: ApiKeyRecord; circuit: CircuitBreakerState } => ({
+    const createCandidate = (
+      id: string,
+      weight: number,
+    ): { record: ApiKeyRecord; circuit: CircuitBreakerState } => ({
       record: {
         id,
         key: `key-${id}`,

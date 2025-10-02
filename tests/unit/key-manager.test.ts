@@ -47,8 +47,8 @@ describe("KeyManager", () => {
 
     const keys = keyManager.listKeys();
     expect(keys.length).toBe(2);
-    const key1 = keys.find(k => k.name === 'key1');
-    const key2 = keys.find(k => k.name === 'key2');
+    const key1 = keys.find((k) => k.name === "key1");
+    const key2 = keys.find((k) => k.name === "key2");
     expect(key1?.weight).toBe(100);
     expect(key2?.weight).toBe(1);
   });
@@ -106,7 +106,7 @@ describe("KeyManager", () => {
     const selection = keyManager.selectKey();
     expect(selection).not.toBeNull();
   });
-  
+
   it("should close circuit after a success in half-open state", () => {
     const configKeys: ApiKeyConfig[] = [{ name: "key1", key: "key-value-1" }];
     keyManager.bootstrap(configKeys, { keys: [], health: [], circuits: [], metrics: [] });
@@ -114,7 +114,7 @@ describe("KeyManager", () => {
     for (let i = 0; i < defaultMonitoringConfig.failureThreshold; i++) {
       keyManager.recordFailure("key1", "test_failure", false, 100);
     }
-    
+
     setSystemTime(new Date(Date.now() + (defaultMonitoringConfig.recoveryTimeSeconds + 1) * 1000));
     keyManager.evaluateCircuitState("key1");
 

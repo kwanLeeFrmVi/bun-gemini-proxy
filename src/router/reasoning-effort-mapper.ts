@@ -54,7 +54,9 @@ export function getThinkingConfig(reasoningEffort: string): {
  * @param reasoningEffort - Value to check
  * @returns true if valid reasoning effort level
  */
-export function isValidReasoningEffort(reasoningEffort: unknown): reasoningEffort is ReasoningEffort {
+export function isValidReasoningEffort(
+  reasoningEffort: unknown,
+): reasoningEffort is ReasoningEffort {
   if (typeof reasoningEffort !== "string") return false;
   const normalized = reasoningEffort.toLowerCase();
   return normalized === "low" || normalized === "medium" || normalized === "high";

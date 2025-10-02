@@ -8,7 +8,7 @@ This project is a Bun-based TypeScript proxy server for the Gemini API. It is de
 
 ### Prerequisites
 
-*   [Bun](https://bun.sh/)
+- [Bun](https://bun.sh/)
 
 ### Installation
 
@@ -58,7 +58,7 @@ bun run format:fix
 
 ## Development Conventions
 
-*   **Code Style:** The project uses Prettier for code formatting and ESLint for linting. The configuration for these tools can be found in `.prettierrc` and `eslint.config.js`, respectively.
-*   **Testing:** The project uses `bun test` for running tests. Test files are located in the `tests` directory.
-*   **Persistence:** The application state is persisted to a SQLite database, with a JSON file as a fallback. The `StateStore` interface in `src/persistence/state-store.ts` defines the contract for state persistence.
-*   **Configuration:** The application is configured via a `config.yaml` file. The `ConfigManager` in `src/server/config-manager.ts` is responsible for loading and managing the configuration.
+- **Code Style:** The project uses Prettier for code formatting and ESLint for linting. The configuration for these tools can be found in `.prettierrc` and `eslint.config.js`, respectively.
+- **Testing:** The project uses `bun test` for running tests. Test files are located in the `tests` directory.
+- **Persistence:** The application state is persisted to a SQLite database, with a JSON file as a fallback. The `StateStore` interface in `src/persistence/state-store.ts` defines the contract for state persistence.
+- **Configuration:** The application is configured via a `config.yaml` file. The `ConfigManager` in `src/server/config-manager.ts` is responsible for loading and managing the configuration.

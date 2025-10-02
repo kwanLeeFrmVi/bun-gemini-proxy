@@ -1,7 +1,7 @@
 import type { ProxyConfig } from "../../types/config.ts";
-import type { StateStore } from "../../persistence/state-store.ts";
+import type { StateStore } from "../../persistence/types.ts";
 import type { KeyManager } from "../../keys/key-manager.ts";
-import type { KeyStatusSummary } from "../../types/key.ts";
+import type { KeyStatusSummary, ClientUsageStats } from "../../types/key.ts";
 import { logger } from "../../observability/logger.ts";
 import { errorResponse } from "../responses.ts";
 
@@ -45,6 +45,7 @@ interface InfoPageViewModel {
   availableKeys: number;
   usageSummary: UsageSummary;
   keyRows: InfoPageKeyRow[];
+  clientStats: ClientUsageStats[];
 }
 
 /**
@@ -129,20 +130,18 @@ export class InfoView {
         // Calculate cooldown status
         const cooldownMs = key.weight * 1000; // Assuming weight is cooldownSeconds for simplicity
         const timeSinceUse = key.lastUsed ? now - key.lastUsed.getTime() : Infinity;
-        const cooldownRemaining = key.lastUsed && timeSinceUse < cooldownMs
-          ? cooldownMs - timeSinceUse
-          : 0;
-        const cooldownEndsAt = cooldownRemaining > 0 && key.lastUsed
-          ? new Date(key.lastUsed.getTime() + cooldownMs)
-          : null;
+        const cooldownRemaining =
+          key.lastUsed && timeSinceUse < cooldownMs ? cooldownMs - timeSinceUse : 0;
+        const cooldownEndsAt =
+          cooldownRemaining > 0 && key.lastUsed
+            ? new Date(key.lastUsed.getTime() + cooldownMs)
+            : null;
 
         // Check availability
-        const isAvailableNow =
-          key.status === "active" &&
-          cooldownRemaining === 0;
+        const isAvailableNow = key.status === "active" && cooldownRemaining === 0;
 
         // Calculate 1-minute requests (approximate from lastUsed)
-        const minuteRequests = key.lastUsed && (now - key.lastUsed.getTime()) < 60000 ? 1 : 0;
+        const minuteRequests = key.lastUsed && now - key.lastUsed.getTime() < 60000 ? 1 : 0;
 
         return {
           id: key.id,
@@ -179,6 +178,9 @@ export class InfoView {
     const keysWithDailyUsage = keyRows.filter((row) => row.dailyRequests > 0).length;
     const availableKeys = keyRows.filter((row) => row.isAvailableNow).length;
 
+    // Get client leaderboard stats
+    const clientStats = this.stateStore.getClientDailyStats();
+
     return {
       baseUrl: this.config.upstreamBaseUrl,
       totalKeys: keys.length,
@@ -191,6 +193,7 @@ export class InfoView {
         keysWithDailyUsage,
       },
       keyRows,
+      clientStats,
     } satisfies InfoPageViewModel;
   }
 
@@ -332,6 +335,7 @@ export class InfoView {
     <h1>🔧 Gemini Proxy Server Info</h1>
     ${this.renderOverviewSection(model)}
     ${this.renderUsageSection(model.usageSummary)}
+    ${this.renderClientLeaderboard(model.clientStats)}
     ${this.renderKeyTable(model.keyRows)}
   </div>
 </body>
@@ -339,9 +343,7 @@ export class InfoView {
   }
 
   private renderOverviewSection(model: InfoPageViewModel): string {
-    const availabilityPercent = model.totalKeys > 0
-      ? model.availableKeys / model.totalKeys
-      : 0;
+    const availabilityPercent = model.totalKeys > 0 ? model.availableKeys / model.totalKeys : 0;
 
     return `<h2>📊 Server Configuration</h2>
     <div class="info-grid">
@@ -355,7 +357,7 @@ export class InfoView {
       </div>
       <div class="info-card">
         <h3>Available Now</h3>
-        <div class="value" style="color: ${model.availableKeys > 0 ? '#16a34a' : '#dc2626'};">
+        <div class="value" style="color: ${model.availableKeys > 0 ? "#16a34a" : "#dc2626"};">
           ${this.formatInteger(model.availableKeys)} / ${this.formatInteger(model.totalKeys)}
         </div>
         <div style="font-size: 0.9em; color: #64748b; margin-top: 5px;">
@@ -389,6 +391,45 @@ export class InfoView {
         <div class="value">${this.formatInteger(summary.dailyErrors)}</div>
       </div>
     </div>`;
+  }
+
+  private renderClientLeaderboard(clientStats: ClientUsageStats[]): string {
+    if (clientStats.length === 0) {
+      return `<h2>👥 Client Leaderboard</h2>
+    <p class="empty-state">No client activity recorded yet.</p>`;
+    }
+
+    const rows = clientStats
+      .map(
+        (client) => `
+        <tr>
+          <td><code>${client.maskedToken}</code></td>
+          <td>${this.formatInteger(client.minuteRequests)}</td>
+          <td>${this.formatInteger(client.dailyRequests)}</td>
+          <td>${this.formatInteger(client.weeklyRequests)}</td>
+          <td>${this.formatPercent(client.successRate)}</td>
+        </tr>`,
+      )
+      .join("");
+
+    return `<h2>👥 Client Leaderboard</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Client Token</th>
+          <th>1m Requests</th>
+          <th>24h Requests</th>
+          <th>7d Requests</th>
+          <th>Success Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+    <p class="table-note">
+      <strong>Note:</strong> Client tokens are masked for security. Sorted by total request count (descending).
+    </p>`;
   }
 
   private renderKeyTable(keyRows: InfoPageKeyRow[]): string {
@@ -427,7 +468,7 @@ export class InfoView {
 
     return keyRows
       .map(
-        (row) => `<tr style="${row.isAvailableNow ? '' : 'opacity: 0.7;'}">
+        (row) => `<tr style="${row.isAvailableNow ? "" : "opacity: 0.7;"}">
           <td><strong>${this.escapeHtml(row.name)}</strong></td>
           <td><span class="status-badge ${this.statusClasses[row.status]}">${this.escapeHtml(this.formatStatus(row.status))}</span></td>
           <td>${this.formatAvailability(row)}</td>
@@ -529,7 +570,7 @@ export class InfoView {
           return "&lt;";
         case ">":
           return "&gt;";
-        case "\"":
+        case '"':
           return "&quot;";
         case "'":
           return "&#39;";

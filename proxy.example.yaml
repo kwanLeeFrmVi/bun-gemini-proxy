@@ -3,30 +3,30 @@
 
 proxy:
   # Server binding
-  host: "0.0.0.0"  # Bind to all interfaces (use "127.0.0.1" for localhost only)
-  port: 8000       # HTTP port for the proxy server
+  host: "0.0.0.0" # Bind to all interfaces (use "127.0.0.1" for localhost only)
+  port: 8000 # HTTP port for the proxy server
 
   # Admin authentication (CHANGE THIS IN PRODUCTION!)
-  adminToken: "test-admin-token"  # Token for /admin/* endpoints
+  adminToken: "test-admin-token" # Token for /admin/* endpoints
 
   # Request settings
-  requestTimeoutMs: 10000  # Timeout for upstream Gemini API requests (10 seconds)
+  requestTimeoutMs: 10000 # Timeout for upstream Gemini API requests (10 seconds)
 
   # Upstream API
-  upstreamBaseUrl: "https://generativelanguage.googleapis.com"  # Gemini API base URL
+  upstreamBaseUrl: "https://generativelanguage.googleapis.com" # Gemini API base URL
 
   # Client authentication (optional)
-  accessTokens: []    # List of tokens clients must provide (empty = no auth required)
-  requireAuth: false  # Set to true to enforce client authentication
+  accessTokens: [] # List of tokens clients must provide (empty = no auth required)
+  requireAuth: false # Set to true to enforce client authentication
 
 # Key health monitoring and circuit breaker settings
 monitoring:
-  healthCheckIntervalSeconds: 30  # How often to check key health
-  failureThreshold: 3             # Consecutive failures before disabling a key
-  recoveryTimeSeconds: 300        # How long to wait before retrying a disabled key (5 minutes)
-  windowSeconds: 300              # Time window for tracking key health (5 minutes)
+  healthCheckIntervalSeconds: 30 # How often to check key health
+  failureThreshold: 3 # Consecutive failures before disabling a key
+  recoveryTimeSeconds: 300 # How long to wait before retrying a disabled key (5 minutes)
+  windowSeconds: 300 # Time window for tracking key health (5 minutes)
 
 # State persistence for key health across restarts
 persistence:
-  sqlitePath: ".runtime/state.sqlite"      # SQLite database for persistent state
-  fallbackJsonPath: ".runtime/state.json"  # JSON fallback if SQLite fails
+  sqlitePath: ".runtime/state.sqlite" # SQLite database for persistent state
+  fallbackJsonPath: ".runtime/state.json" # JSON fallback if SQLite fails

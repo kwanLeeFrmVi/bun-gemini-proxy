@@ -4,6 +4,8 @@ import { logger } from "../observability/logger.ts";
 import type {
   ApiKeyRecord,
   CircuitBreakerState,
+  ClientMetricsSnapshot,
+  ClientUsageStats,
   HealthScoreState,
   RequestMetricsSnapshot,
 } from "../types/key.ts";
@@ -28,17 +30,20 @@ export class JsonStateStore implements StateStore {
 
   init(): void {
     if (!existsSync(this.path)) {
-      writeFileSync(this.path, JSON.stringify({ keys: [], health: [], circuits: [], metrics: [] }));
+      writeFileSync(
+        this.path,
+        JSON.stringify({ keys: [], health: [], circuits: [], metrics: [], clientMetrics: [] }),
+      );
     }
   }
 
   load(): PersistedState {
     if (!existsSync(this.path)) {
-      return { keys: [], health: [], circuits: [], metrics: [] };
+      return { keys: [], health: [], circuits: [], metrics: [], clientMetrics: [] };
     }
     const raw = readFileSync(this.path, "utf8");
     if (!raw) {
-      return { keys: [], health: [], circuits: [], metrics: [] };
+      return { keys: [], health: [], circuits: [], metrics: [], clientMetrics: [] };
     }
 
     try {
@@ -64,10 +69,14 @@ export class JsonStateStore implements StateStore {
           ...metric,
           timestamp: new Date(metric.timestamp),
         })),
+        clientMetrics: (parsed.clientMetrics ?? []).map((metric) => ({
+          ...metric,
+          timestamp: new Date(metric.timestamp),
+        })),
       } satisfies PersistedState;
     } catch (error) {
       logger.error({ error }, "Failed to parse fallback persistence file; starting empty state");
-      return { keys: [], health: [], circuits: [], metrics: [] };
+      return { keys: [], health: [], circuits: [], metrics: [], clientMetrics: [] };
     }
   }
 
@@ -94,6 +103,10 @@ export class JsonStateStore implements StateStore {
             openedAt: circuit.openedAt ? circuit.openedAt.toISOString() : null,
           })),
           metrics: state.metrics.map((metric) => ({
+            ...metric,
+            timestamp: metric.timestamp.toISOString(),
+          })),
+          clientMetrics: (state.clientMetrics ?? []).map((metric) => ({
             ...metric,
             timestamp: metric.timestamp.toISOString(),
           })),
@@ -147,5 +160,76 @@ export class JsonStateStore implements StateStore {
   getWeeklyUsageStats(): UsageStats[] {
     const current = this.load();
     return StatsCalculator.getWeeklyStats(current.metrics);
+  }
+
+  recordClientMetrics(snapshot: ClientMetricsSnapshot): void {
+    const current = this.load();
+    const clientMetrics = current.clientMetrics ?? [];
+    clientMetrics.push(snapshot);
+    if (clientMetrics.length > 10000) {
+      clientMetrics.splice(0, clientMetrics.length - 10000);
+    }
+    current.clientMetrics = clientMetrics;
+    this.save(current);
+  }
+
+  getClientDailyStats(): ClientUsageStats[] {
+    const current = this.load();
+    return this.calculateClientStats(current.clientMetrics ?? [], 24 * 60 * 60 * 1000, 60 * 1000);
+  }
+
+  getClientWeeklyStats(): ClientUsageStats[] {
+    const current = this.load();
+    return this.calculateClientStats(
+      current.clientMetrics ?? [],
+      7 * 24 * 60 * 60 * 1000,
+      60 * 1000,
+    );
+  }
+
+  private calculateClientStats(
+    metrics: ClientMetricsSnapshot[],
+    windowMs: number,
+    minuteWindowMs: number,
+  ): ClientUsageStats[] {
+    const now = Date.now();
+    const windowStart = new Date(now - windowMs);
+    const minuteStart = new Date(now - minuteWindowMs);
+
+    const filtered = metrics.filter((m) => m.timestamp >= windowStart);
+    const grouped = new Map<
+      string,
+      { total: number; success: number; error: number; minute: number }
+    >();
+
+    filtered.forEach((metric) => {
+      const existing = grouped.get(metric.clientId) ?? {
+        total: 0,
+        success: 0,
+        error: 0,
+        minute: 0,
+      };
+      existing.total += metric.requestCount;
+      existing.success += metric.successCount;
+      existing.error += metric.errorCount;
+      if (metric.timestamp >= minuteStart) {
+        existing.minute += metric.requestCount;
+      }
+      grouped.set(metric.clientId, existing);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([clientId, stats]) => {
+        const successRate = stats.total > 0 ? stats.success / stats.total : 0;
+        return {
+          clientId,
+          maskedToken: clientId, // Already masked
+          minuteRequests: stats.minute,
+          dailyRequests: stats.total,
+          weeklyRequests: stats.total,
+          successRate,
+        } satisfies ClientUsageStats;
+      })
+      .sort((a, b) => b.dailyRequests - a.dailyRequests);
   }
 }

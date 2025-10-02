@@ -1,0 +1,16 @@
+upstreamBaseUrl: https://generativelanguage.googleapis.com
+port: 8000
+host: 0.0.0.0
+accessTokens:
+  - client-alice-12345
+  - client-bob-67890
+  - client-charlie-11111
+requireAuth: true
+
+monitoring:
+  healthCheckIntervalSeconds: 30
+  failureThreshold: 10
+  recoveryTimeSeconds: 60
+  windowSeconds: 300
+
+cooldownSeconds: 6
