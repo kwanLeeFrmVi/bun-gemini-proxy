@@ -25,8 +25,8 @@ const DEFAULT_PROXY_CONFIG: ProxyConfig = {
 
 const DEFAULT_MONITORING_CONFIG: MonitoringConfig = {
   healthCheckIntervalSeconds: 30,
-  failureThreshold: 3,
-  recoveryTimeSeconds: 300,
+  failureThreshold: 10,
+  recoveryTimeSeconds: 60,
   windowSeconds: 300,
 };
 

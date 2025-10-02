@@ -56,9 +56,29 @@ export class KeySelector {
    *
    * @param isActive - Whether the key is administratively active
    * @param circuitState - Current circuit breaker state
+   * @param lastUsedAt - Timestamp of last request using this key
+   * @param cooldownSeconds - Minimum time between requests for this key
    * @returns true if the key can be selected
    */
-  isEligible(isActive: boolean, circuitState: "CLOSED" | "OPEN" | "HALF_OPEN"): boolean {
-    return isActive && (circuitState === "CLOSED" || circuitState === "HALF_OPEN");
+  isEligible(
+    isActive: boolean,
+    circuitState: "CLOSED" | "OPEN" | "HALF_OPEN",
+    lastUsedAt: Date | null,
+    cooldownSeconds: number,
+  ): boolean {
+    if (!isActive || (circuitState !== "CLOSED" && circuitState !== "HALF_OPEN")) {
+      return false;
+    }
+
+    // Check cooldown: ensure enough time has passed since last use
+    if (lastUsedAt !== null) {
+      const cooldownMs = cooldownSeconds * 1000;
+      const timeSinceUse = Date.now() - lastUsedAt.getTime();
+      if (timeSinceUse < cooldownMs) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }

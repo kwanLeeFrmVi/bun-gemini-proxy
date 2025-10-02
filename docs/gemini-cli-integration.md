@@ -1,9 +1,9 @@
 
-# Gemini CLI Integration
+# Achieving 150 RPM with Free Tier - Study Guide
 
 ## Overview
 
-This document provides a detailed guide to the `/gemini-cli` route, a powerful feature of the proxy server that allows you to interact with the `gemini` command-line tool through an OpenAI-compatible API. This integration enables you to use any OpenAI-compatible client, such as code editors or command-line tools, to send requests to the `gemini` CLI and receive responses in a standardized format.
+This guide demonstrates achieving 150 requests per minute (RPM) on Gemini API using 5 free-tier keys with the proxy's intelligent key rotation and cooldown enforcement system. Perfect for academic assignments and learning distributed system design patterns.
 
 ## Purpose
 

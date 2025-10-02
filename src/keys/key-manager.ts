@@ -152,8 +152,13 @@ export class KeyManager {
         this.persistState(state.record.id);
       }
 
-      // Check eligibility
-      if (this.selector.isEligible(state.record.isActive, state.circuit.state, isMockMode)) {
+      // Check eligibility with cooldown enforcement
+      if (this.selector.isEligible(
+        state.record.isActive,
+        state.circuit.state,
+        state.record.lastUsedAt,
+        state.record.cooldownSeconds,
+      ) || isMockMode) {
         candidates.push(state);
       }
     });
@@ -214,6 +219,7 @@ export class KeyManager {
     const now = new Date();
     state.health = this.healthTracker.recordFailure(state.health);
     state.circuit = this.circuitBreaker.recordFailure(state.circuit, reason, isRateLimit);
+    state.record.lastUsedAt = now;
 
     observeKeyHealth(keyId, state.record.name, state.health.score, CIRCUIT_STATE_VALUE[state.circuit.state]);
     this.persistState(keyId);
