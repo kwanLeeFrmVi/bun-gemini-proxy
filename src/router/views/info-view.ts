@@ -25,16 +25,24 @@ interface InfoPageKeyRow {
   status: KeyStatusSummary["status"];
   failureCount: number;
   lastUsed: Date | null;
+  minuteRequests: number;
   dailyRequests: number;
   weeklyRequests: number;
   requestsPerHour: number;
   successRate: number;
   avgLatencyMs: number | null;
+  weight: number;
+  healthScore: number;
+  nextRetry: Date | null;
+  cooldownSeconds: number;
+  isAvailableNow: boolean;
+  cooldownEndsAt: Date | null;
 }
 
 interface InfoPageViewModel {
   baseUrl: string;
   totalKeys: number;
+  availableKeys: number;
   usageSummary: UsageSummary;
   keyRows: InfoPageKeyRow[];
 }
@@ -111,11 +119,30 @@ export class InfoView {
 
     const dailyMap = new Map(dailyStats.map((stat) => [stat.keyId, stat]));
     const weeklyMap = new Map(weeklyStats.map((stat) => [stat.keyId, stat]));
+    const now = Date.now();
 
     const keyRows: InfoPageKeyRow[] = keys
       .map((key) => {
         const daily = dailyMap.get(key.id);
         const weekly = weeklyMap.get(key.id);
+
+        // Calculate cooldown status
+        const cooldownMs = key.weight * 1000; // Assuming weight is cooldownSeconds for simplicity
+        const timeSinceUse = key.lastUsed ? now - key.lastUsed.getTime() : Infinity;
+        const cooldownRemaining = key.lastUsed && timeSinceUse < cooldownMs
+          ? cooldownMs - timeSinceUse
+          : 0;
+        const cooldownEndsAt = cooldownRemaining > 0 && key.lastUsed
+          ? new Date(key.lastUsed.getTime() + cooldownMs)
+          : null;
+
+        // Check availability
+        const isAvailableNow =
+          key.status === "active" &&
+          cooldownRemaining === 0;
+
+        // Calculate 1-minute requests (approximate from lastUsed)
+        const minuteRequests = key.lastUsed && (now - key.lastUsed.getTime()) < 60000 ? 1 : 0;
 
         return {
           id: key.id,
@@ -123,24 +150,39 @@ export class InfoView {
           status: key.status,
           failureCount: key.failureCount,
           lastUsed: key.lastUsed,
+          minuteRequests,
           dailyRequests: daily?.totalRequests ?? 0,
           weeklyRequests: weekly?.totalRequests ?? 0,
           requestsPerHour: daily ? daily.totalRequests / 24 : 0,
           successRate: daily?.successRate ?? 0,
           avgLatencyMs: daily ? daily.avgLatencyMs : null,
+          weight: key.weight,
+          healthScore: key.healthScore,
+          nextRetry: key.nextRetry,
+          cooldownSeconds: key.weight, // Using weight as cooldown for now
+          isAvailableNow,
+          cooldownEndsAt,
         } satisfies InfoPageKeyRow;
       })
-      .sort((a, b) => b.dailyRequests - a.dailyRequests || a.name.localeCompare(b.name));
+      .sort((a, b) => {
+        // Sort by availability first, then by daily requests
+        if (a.isAvailableNow !== b.isAvailableNow) {
+          return a.isAvailableNow ? -1 : 1;
+        }
+        return b.dailyRequests - a.dailyRequests || a.name.localeCompare(b.name);
+      });
 
     const totalDailyRequests = dailyStats.reduce((sum, stat) => sum + stat.totalRequests, 0);
     const totalWeeklyRequests = weeklyStats.reduce((sum, stat) => sum + stat.totalRequests, 0);
     const totalDailySuccess = dailyStats.reduce((sum, stat) => sum + stat.successCount, 0);
     const totalDailyErrors = dailyStats.reduce((sum, stat) => sum + stat.errorCount, 0);
     const keysWithDailyUsage = keyRows.filter((row) => row.dailyRequests > 0).length;
+    const availableKeys = keyRows.filter((row) => row.isAvailableNow).length;
 
     return {
       baseUrl: this.config.upstreamBaseUrl,
       totalKeys: keys.length,
+      availableKeys,
       usageSummary: {
         dailyRequests: totalDailyRequests,
         weeklyRequests: totalWeeklyRequests,
@@ -297,6 +339,10 @@ export class InfoView {
   }
 
   private renderOverviewSection(model: InfoPageViewModel): string {
+    const availabilityPercent = model.totalKeys > 0
+      ? model.availableKeys / model.totalKeys
+      : 0;
+
     return `<h2>📊 Server Configuration</h2>
     <div class="info-grid">
       <div class="info-card">
@@ -306,6 +352,15 @@ export class InfoView {
       <div class="info-card">
         <h3>Total Keys</h3>
         <div class="value">${this.formatInteger(model.totalKeys)}</div>
+      </div>
+      <div class="info-card">
+        <h3>Available Now</h3>
+        <div class="value" style="color: ${model.availableKeys > 0 ? '#16a34a' : '#dc2626'};">
+          ${this.formatInteger(model.availableKeys)} / ${this.formatInteger(model.totalKeys)}
+        </div>
+        <div style="font-size: 0.9em; color: #64748b; margin-top: 5px;">
+          ${this.formatPercent(availabilityPercent)} ready
+        </div>
       </div>
       <div class="info-card">
         <h3>Keys With Traffic (24h)</h3>
@@ -343,39 +398,55 @@ export class InfoView {
         <tr>
           <th>Key Name</th>
           <th>Status</th>
-          <th>Usage (24h / 7d)</th>
-          <th>Failed Count</th>
-          <th>Last Used</th>
-          <th>Requests/Hour</th>
+          <th>Availability</th>
+          <th>Health Score</th>
+          <th>Usage (1m / 24h / 7d)</th>
+          <th>RPH</th>
           <th>Success Rate</th>
-          <th>Avg Latency (24h)</th>
+          <th>Avg Latency</th>
+          <th>Weight/Cooldown</th>
         </tr>
       </thead>
       <tbody>
         ${this.renderKeyRows(keyRows)}
       </tbody>
     </table>
-    <p class="table-note"><strong>Note:</strong> Usage statistics are calculated from recorded metrics. Requests/hour and latency are based on the last 24 hours of activity.</p>`;
+    <p class="table-note">
+      <strong>Note:</strong> Usage statistics based on last 24h.
+      <strong>Availability:</strong> ✅ Ready to use | ⏳ In cooldown | ⚠️ Circuit open/disabled.
+      <strong>RPH:</strong> Requests per hour.
+    </p>`;
   }
 
   private renderKeyRows(keyRows: InfoPageKeyRow[]): string {
     if (keyRows.length === 0) {
       return `<tr>
-          <td class="empty-state" colspan="8">No API keys configured yet.</td>
+          <td class="empty-state" colspan="9">No API keys configured yet.</td>
         </tr>`;
     }
 
     return keyRows
       .map(
-        (row) => `<tr>
+        (row) => `<tr style="${row.isAvailableNow ? '' : 'opacity: 0.7;'}">
           <td><strong>${this.escapeHtml(row.name)}</strong></td>
           <td><span class="status-badge ${this.statusClasses[row.status]}">${this.escapeHtml(this.formatStatus(row.status))}</span></td>
-          <td>${this.formatInteger(row.dailyRequests)} / ${this.formatInteger(row.weeklyRequests)}</td>
-          <td>${this.formatInteger(row.failureCount)}</td>
-          <td>${this.formatDateTime(row.lastUsed)}</td>
-          <td>${this.formatDecimal(row.requestsPerHour)} req/h</td>
+          <td>${this.formatAvailability(row)}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="flex: 1; background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden;">
+                <div style="width: ${row.healthScore * 100}%; height: 100%; background: ${this.getHealthColor(row.healthScore)};"></div>
+              </div>
+              <span style="font-size: 0.9em; color: #64748b;">${this.formatPercent(row.healthScore)}</span>
+            </div>
+          </td>
+          <td>${this.formatInteger(row.minuteRequests)} / ${this.formatInteger(row.dailyRequests)} / ${this.formatInteger(row.weeklyRequests)}</td>
+          <td>${this.formatDecimal(row.requestsPerHour)}</td>
           <td>${this.formatPercent(row.successRate)}</td>
           <td>${this.formatLatency(row.avgLatencyMs)}</td>
+          <td style="font-size: 0.85em;">
+            <div><strong>W:</strong> ${row.weight}</div>
+            <div style="color: #64748b;"><strong>CD:</strong> ${row.cooldownSeconds}s</div>
+          </td>
         </tr>`,
       )
       .join("");
@@ -414,6 +485,39 @@ export class InfoView {
 
   private formatStatus(status: KeyStatusSummary["status"]): string {
     return this.statusLabels[status] ?? status;
+  }
+
+  private formatAvailability(row: InfoPageKeyRow): string {
+    if (row.status === "disabled") {
+      return `<span style="font-size: 1.2em;" title="Key disabled">⚠️ Disabled</span>`;
+    }
+
+    if (row.status === "circuit_open") {
+      const retryTime = row.nextRetry ? this.formatDateTime(row.nextRetry) : "Unknown";
+      return `<span style="font-size: 1.2em;" title="Circuit open, retry at ${retryTime}">⚠️ Open</span>`;
+    }
+
+    if (row.status === "circuit_half_open") {
+      return `<span style="font-size: 1.2em;" title="Circuit half-open, testing">🔄 Testing</span>`;
+    }
+
+    if (row.isAvailableNow) {
+      return `<span style="font-size: 1.2em; color: #16a34a;" title="Ready to accept requests">✅ Ready</span>`;
+    }
+
+    if (row.cooldownEndsAt) {
+      const remaining = Math.ceil((row.cooldownEndsAt.getTime() - Date.now()) / 1000);
+      return `<span style="font-size: 1.2em;" title="Cooldown ends at ${this.formatDateTime(row.cooldownEndsAt)}">⏳ ${remaining}s</span>`;
+    }
+
+    return `<span style="font-size: 1.2em;">—</span>`;
+  }
+
+  private getHealthColor(score: number): string {
+    if (score >= 0.9) return "#16a34a"; // green
+    if (score >= 0.7) return "#eab308"; // yellow
+    if (score >= 0.5) return "#f97316"; // orange
+    return "#dc2626"; // red
   }
 
   private escapeHtml(value: string): string {
