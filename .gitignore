@@ -39,3 +39,4 @@ proxy.yaml
 .runtime/
 Deployment-PRD.md
 bin/*
+scripts/deploy.sh
