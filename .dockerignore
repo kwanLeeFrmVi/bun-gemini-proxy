@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Build artifacts
+dist/
+build/
+*.log
+
+# Development files
+.env
+.env.*
+*.local
+
+# Tests
+tests/
+*.test.ts
+*.spec.ts
+__tests__/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Scripts (development only)
+scripts/
+
+# Misc
+claudedocs/
+.claude/
+tmp/
+temp/

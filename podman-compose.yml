@@ -1,0 +1,61 @@
+services:
+  gemini-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: localhost/gemini-proxy:latest
+    container_name: gemini-proxy
+    restart: unless-stopped
+
+    ports:
+      - "5001:8000"
+
+    volumes:
+      # Mount configuration files (REQUIRED)
+      - ./proxy.yaml:/app/proxy.yaml:ro,Z
+      - ./keys.yaml:/app/keys.yaml:ro,Z
+
+      # Persistence for key health state and runtime data
+      - ./.runtime:/app/.runtime:Z
+
+    healthcheck:
+      test: ["CMD", "bun", "-e", "await fetch('http://localhost:8000/health').then(r => r.ok ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+    # Resource limits (Podman cgroup v2 compatible)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+    # Logging configuration
+    logging:
+      driver: "journald"
+      options:
+        tag: "gemini-proxy"
+
+    # Security options (Podman specific)
+    security_opt:
+      - no-new-privileges:true
+      - label=type:container_runtime_t
+
+    # Run as non-root user (already set in Dockerfile)
+    # userns_mode: "keep-id"  # Conflicts with pods, removed
+    # user: "1000:1000"  # Already set in Dockerfile
+
+# Optional: Create named volume
+volumes:
+  gemini-proxy-data:
+    driver: local
+
+# Optional: Custom network
+networks:
+  default:
+    name: gemini-proxy-network
