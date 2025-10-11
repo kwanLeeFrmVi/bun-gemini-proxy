@@ -40,4 +40,4 @@ proxy.yaml
 Deployment-PRD.md
 bin/*
 scripts/deploy.sh
-deploy-remote.sh
+scripts/deploy-remote.sh
